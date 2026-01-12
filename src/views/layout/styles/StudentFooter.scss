@@ -1,0 +1,53 @@
+.student-footer {
+  width: 100%;
+  background: #fafafa;
+  color: #595959;
+  margin-top: 60px;
+  border-top: 1px solid #f0f0f0;
+
+  .footer-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 40px 20px 20px;
+  }
+
+  .footer-content {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 40px;
+    margin-bottom: 30px;
+
+    .footer-section {
+      h4 {
+        color: #262626;
+        font-size: 16px;
+        margin-bottom: 16px;
+        font-weight: 500;
+      }
+
+      p, a {
+        display: block;
+        font-size: 14px;
+        line-height: 2;
+        color: #595959;
+        text-decoration: none;
+        transition: color 0.3s;
+
+        &:hover {
+          color: #f5222d;
+        }
+      }
+    }
+  }
+
+  .footer-bottom {
+    padding-top: 20px;
+    border-top: 1px solid #f0f0f0;
+    text-align: center;
+
+    p {
+      font-size: 14px;
+      color: #8c8c8c;
+    }
+  }
+}

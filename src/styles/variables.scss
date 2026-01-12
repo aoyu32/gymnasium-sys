@@ -1,0 +1,65 @@
+// 主题色变量
+:root {
+  // 学生端主题色 - 激情热烈红
+  --student-primary: #f5222d;
+  --student-primary-light: #ff4d4f;
+  --student-primary-dark: #cf1322;
+  
+  // 管理端主题色
+  --manager-primary: #fa541c;
+  --admin-primary: #fa8c16;
+  
+  // 通用颜色
+  --success-color: #52c41a;
+  --warning-color: #faad14;
+  --error-color: #f5222d;
+  --text-primary: #262626;
+  --text-secondary: #8c8c8c;
+  --border-color: #d9d9d9;
+  --bg-color: #f5f5f5;
+}
+
+// SCSS 变量
+$student-primary: #f5222d;
+$student-primary-light: #ff4d4f;
+$student-primary-dark: #cf1322;
+
+$manager-primary: #fa541c;
+$admin-primary: #fa8c16;
+
+$success-color: #52c41a;
+$warning-color: #faad14;
+$error-color: #f5222d;
+
+$text-primary: #262626;
+$text-secondary: #8c8c8c;
+$text-tertiary: #bfbfbf;
+
+$border-color: #d9d9d9;
+$border-color-light: #f0f0f0;
+
+$bg-color: #f5f5f5;
+$bg-white: #ffffff;
+
+// 间距
+$spacing-xs: 4px;
+$spacing-sm: 8px;
+$spacing-md: 16px;
+$spacing-lg: 24px;
+$spacing-xl: 32px;
+
+// 圆角
+$radius-sm: 4px;
+$radius-md: 8px;
+$radius-lg: 12px;
+$radius-xl: 16px;
+
+// 阴影
+$shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.06);
+$shadow-md: 0 4px 16px rgba(0, 0, 0, 0.12);
+$shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.15);
+
+// 过渡
+$transition-fast: 0.2s;
+$transition-base: 0.3s;
+$transition-slow: 0.5s;

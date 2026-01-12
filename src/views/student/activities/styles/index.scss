@@ -1,0 +1,109 @@
+.student-activities {
+  .page-header {
+    margin-bottom: 32px;
+
+    h1 {
+      font-size: 28px;
+      font-weight: 600;
+      color: #262626;
+      margin-bottom: 8px;
+    }
+
+    p {
+      font-size: 14px;
+      color: #8c8c8c;
+    }
+  }
+
+  .filter-section {
+    background: #fff;
+    padding: 24px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  }
+
+  .activities-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+
+    .activity-item {
+      background: #fff;
+      border-radius: 12px;
+      padding: 24px;
+      display: flex;
+      gap: 24px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+      transition: all 0.3s;
+
+      &:hover {
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+      }
+
+      .activity-image {
+        width: 200px;
+        height: 150px;
+        border-radius: 8px;
+        overflow: hidden;
+        flex-shrink: 0;
+
+        img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+      }
+
+      .activity-content {
+        flex: 1;
+
+        .activity-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 12px;
+
+          h3 {
+            font-size: 18px;
+            font-weight: 500;
+            color: #262626;
+          }
+        }
+
+        .activity-desc {
+          font-size: 14px;
+          color: #595959;
+          line-height: 1.6;
+          margin-bottom: 16px;
+        }
+
+        .activity-meta {
+          display: flex;
+          gap: 24px;
+
+          .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 14px;
+            color: #8c8c8c;
+          }
+        }
+      }
+
+      .activity-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        justify-content: center;
+      }
+    }
+  }
+
+  .pagination {
+    display: flex;
+    justify-content: center;
+    margin-top: 32px;
+  }
+}

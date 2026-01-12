@@ -1,0 +1,152 @@
+.student-forum {
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 32px;
+
+    h1 {
+      font-size: 28px;
+      font-weight: 600;
+      color: #262626;
+      margin-bottom: 8px;
+    }
+
+    p {
+      font-size: 14px;
+      color: #8c8c8c;
+    }
+  }
+
+  .forum-content {
+    background: #fff;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  }
+
+  .category-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #f0f0f0;
+
+    .category-item {
+      padding: 8px 20px;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-size: 14px;
+      color: #595959;
+
+      &:hover {
+        background: #f5f5f5;
+      }
+
+      &.active {
+        background: #ffccc7;
+        color: #f5222d;
+        font-weight: 500;
+      }
+    }
+  }
+
+  .posts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+
+    .post-item {
+      display: flex;
+      gap: 16px;
+      padding: 20px;
+      border-radius: 8px;
+      transition: background 0.3s;
+
+      &:hover {
+        background: #fafafa;
+      }
+
+      .post-avatar {
+        flex-shrink: 0;
+      }
+
+      .post-content {
+        flex: 1;
+
+        .post-header {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 12px;
+
+          .author {
+            font-size: 15px;
+            font-weight: 500;
+            color: #262626;
+          }
+
+          .time {
+            font-size: 13px;
+            color: #8c8c8c;
+          }
+        }
+
+        .post-title {
+          font-size: 16px;
+          font-weight: 500;
+          color: #262626;
+          margin-bottom: 8px;
+        }
+
+        .post-text {
+          font-size: 14px;
+          color: #595959;
+          line-height: 1.6;
+          margin-bottom: 12px;
+        }
+
+        .post-images {
+          display: flex;
+          gap: 8px;
+          margin-bottom: 12px;
+
+          img {
+            width: 120px;
+            height: 120px;
+            object-fit: cover;
+            border-radius: 8px;
+            cursor: pointer;
+          }
+        }
+
+        .post-footer {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding-top: 12px;
+          border-top: 1px solid #f0f0f0;
+
+          .post-stats {
+            display: flex;
+            gap: 16px;
+            font-size: 13px;
+            color: #8c8c8c;
+
+            span {
+              display: flex;
+              align-items: center;
+              gap: 4px;
+            }
+          }
+
+          .post-actions {
+            display: flex;
+            gap: 8px;
+          }
+        }
+      }
+    }
+  }
+}

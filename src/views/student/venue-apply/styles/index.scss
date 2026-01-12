@@ -1,0 +1,136 @@
+.student-venue-apply {
+  .page-header {
+    margin-bottom: 32px;
+
+    h1 {
+      font-size: 28px;
+      font-weight: 600;
+      color: #262626;
+      margin-bottom: 8px;
+    }
+
+    p {
+      font-size: 14px;
+      color: #8c8c8c;
+    }
+  }
+
+  .section-title {
+    font-size: 18px;
+    font-weight: 500;
+    color: #262626;
+    margin-bottom: 20px;
+  }
+
+  .content-wrapper {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 24px;
+    margin-bottom: 40px;
+  }
+
+  .venue-list {
+    .venue-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+
+      .venue-card {
+        background: #fff;
+        border-radius: 12px;
+        overflow: hidden;
+        cursor: pointer;
+        transition: all 0.3s;
+        border: 2px solid transparent;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+
+        &:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+        }
+
+        &.selected {
+          border-color: #f5222d;
+          box-shadow: 0 4px 16px rgba(245, 34, 45, 0.3);
+        }
+
+        .venue-image {
+          position: relative;
+          height: 160px;
+
+          img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+          }
+
+          .venue-status {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+            color: #fff;
+
+            &.available {
+              background: #52c41a;
+            }
+
+            &.busy {
+              background: #ff4d4f;
+            }
+          }
+        }
+
+        .venue-info {
+          padding: 16px;
+
+          h3 {
+            font-size: 16px;
+            font-weight: 500;
+            color: #262626;
+            margin-bottom: 8px;
+          }
+
+          p {
+            font-size: 14px;
+            color: #8c8c8c;
+            margin-bottom: 12px;
+          }
+
+          .venue-meta {
+            display: flex;
+            gap: 16px;
+            font-size: 13px;
+            color: #595959;
+
+            span {
+              display: flex;
+              align-items: center;
+              gap: 4px;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  .apply-form {
+    background: #fff;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    height: fit-content;
+    position: sticky;
+    top: 84px;
+  }
+
+  .my-applications {
+    background: #fff;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  }
+}
