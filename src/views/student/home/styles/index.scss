@@ -1,216 +1,42 @@
 .student-home {
-  .banner-section {
-    border-radius: 12px;
-    overflow: hidden;
-    margin-bottom: 20px;
+  min-height: calc(100vh - 60px - 80px);
+}
 
-    .banner-item {
-      width: 100%;
-      height: 400px;
-      background-size: cover;
-      background-position: center;
-      position: relative;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+.section-title {
+  font-size: 24px;
+  font-weight: bold;
+  color: #333;
+}
 
-      &::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.3);
-      }
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
 
-      .banner-content {
-        position: relative;
-        z-index: 1;
-        text-align: center;
-        color: #fff;
+.activities-section,
+.venues-section {
+  margin-bottom: 40px;
+}
 
-        h2 {
-          font-size: 48px;
-          font-weight: 600;
-          margin-bottom: 16px;
-          text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-        }
+.activities-grid,
+.venues-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
 
-        p {
-          font-size: 20px;
-          margin-bottom: 32px;
-          opacity: 0.9;
-        }
-      }
-    }
+@media (max-width: 1024px) {
+  .activities-grid,
+  .venues-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
+}
 
-  .section-title {
-    font-size: 24px;
-    font-weight: 600;
-    color: #262626;
-    margin-bottom: 24px;
-  }
-
-  .quick-entry-section {
-    margin-bottom: 60px;
-
-    .quick-entry-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 20px;
-
-      .entry-card {
-        background: #fff;
-        border-radius: 12px;
-        padding: 32px 24px;
-        text-align: center;
-        cursor: pointer;
-        transition: all 0.3s;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-
-        &:hover {
-          transform: translateY(-8px);
-          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-        }
-
-        .entry-icon {
-          width: 80px;
-          height: 80px;
-          border-radius: 20px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          margin: 0 auto 20px;
-          color: #fff;
-        }
-
-        .entry-title {
-          font-size: 18px;
-          font-weight: 500;
-          color: #262626;
-          margin-bottom: 8px;
-        }
-
-        .entry-desc {
-          font-size: 14px;
-          color: #8c8c8c;
-        }
-      }
-    }
-  }
-
-  .activities-section {
-    .section-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 24px;
-    }
-
-    .activities-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 24px;
-
-      .activity-card {
-        background: #fff;
-        border-radius: 12px;
-        overflow: hidden;
-        transition: all 0.3s;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-
-        &:hover {
-          transform: translateY(-4px);
-          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-        }
-
-        .activity-image {
-          position: relative;
-          height: 200px;
-          overflow: hidden;
-
-          img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            transition: transform 0.3s;
-          }
-
-          &:hover img {
-            transform: scale(1.1);
-          }
-
-          .activity-tag {
-            position: absolute;
-            top: 12px;
-            right: 12px;
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: 500;
-            color: #fff;
-
-            &.hot {
-              background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
-            }
-
-            &.new {
-              background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-            }
-          }
-        }
-
-        .activity-info {
-          padding: 20px;
-
-          h3 {
-            font-size: 16px;
-            font-weight: 500;
-            color: #262626;
-            margin-bottom: 12px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-          }
-
-          .activity-meta {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            margin-bottom: 16px;
-
-            .meta-item {
-              display: flex;
-              align-items: center;
-              gap: 6px;
-              font-size: 14px;
-              color: #8c8c8c;
-
-              .el-icon {
-                font-size: 16px;
-              }
-            }
-          }
-
-          .activity-footer {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding-top: 16px;
-            border-top: 1px solid #f0f0f0;
-
-            .participants {
-              display: flex;
-              align-items: center;
-              gap: 6px;
-              font-size: 14px;
-              color: #595959;
-            }
-          }
-        }
-      }
-    }
+@media (max-width: 768px) {
+  .activities-grid,
+  .venues-grid {
+    grid-template-columns: 1fr;
   }
 }
