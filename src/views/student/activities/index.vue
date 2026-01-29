@@ -1,78 +1,99 @@
 <template>
   <div class="student-activities">
-    <div class="page-header">
-      <h1>活动中心</h1>
-      <p>浏览并预约各类体育活动</p>
+    <!-- 分类导航栏 -->
+    <div class="category-nav">
+      <div
+        v-for="item in categories"
+        :key="item.value"
+        class="category-item"
+        :class="{ active: activeCategory === item.value }"
+        @click="handleCategoryChange(item.value)"
+      >
+        <el-icon><component :is="item.icon" /></el-icon>
+        <span>{{ item.label }}</span>
+      </div>
     </div>
 
     <!-- 筛选区域 -->
     <div class="filter-section">
-      <el-form :inline="true" :model="filterForm">
-        <el-form-item label="活动类型">
-          <el-select v-model="filterForm.type" placeholder="全部类型" clearable>
-            <el-option label="篮球" value="basketball" />
-            <el-option label="羽毛球" value="badminton" />
-            <el-option label="乒乓球" value="tabletennis" />
-            <el-option label="足球" value="football" />
-          </el-select>
-        </el-form-item>
+      <el-form :inline="true" :model="filterForm" class="filter-form">
         <el-form-item label="活动状态">
-          <el-select v-model="filterForm.status" placeholder="全部状态" clearable>
+          <el-select v-model="filterForm.status" placeholder="全部状态" clearable style="width: 140px">
             <el-option label="报名中" value="open" />
             <el-option label="已满员" value="full" />
             <el-option label="已结束" value="closed" />
           </el-select>
         </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="handleSearch">搜索</el-button>
-          <el-button @click="handleReset">重置</el-button>
+        <el-form-item label="活动日期">
+          <el-date-picker
+            v-model="filterForm.dateRange"
+            type="daterange"
+            range-separator="至"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+            clearable
+            style="width: 340px"
+          />
+        </el-form-item>
+        <el-form-item label="人数范围">
+          <div class="participants-range">
+            <el-input-number
+              v-model="filterForm.minParticipants"
+              :min="0"
+              :max="100"
+              placeholder="最少人数"
+              controls-position="right"
+              style="width: 130px"
+            />
+            <span class="range-separator">-</span>
+            <el-input-number
+              v-model="filterForm.maxParticipants"
+              :min="0"
+              :max="100"
+              placeholder="最多人数"
+              controls-position="right"
+              style="width: 130px"
+            />
+          </div>
+        </el-form-item>
+        <el-form-item label="活动类型">
+          <el-select v-model="filterForm.activityType" placeholder="全部类型" clearable style="width: 140px">
+            <el-option label="公共活动" value="public" />
+            <el-option label="私人活动" value="private" />
+          </el-select>
+        </el-form-item>
+        <el-form-item class="reset-btn-item">
+          <el-button @click="handleReset">
+            <el-icon><RefreshLeft /></el-icon>
+            重置
+          </el-button>
         </el-form-item>
       </el-form>
     </div>
 
     <!-- 活动列表 -->
-    <div class="activities-list">
-      <div v-for="item in activities" :key="item.id" class="activity-item">
-        <div class="activity-image">
-          <img :src="item.image" :alt="item.title" />
-        </div>
-        <div class="activity-content">
-          <div class="activity-header">
-            <h3>{{ item.title }}</h3>
-            <el-tag :type="getStatusType(item.status)">{{ item.statusText }}</el-tag>
-          </div>
-          <p class="activity-desc">{{ item.description }}</p>
-          <div class="activity-meta">
-            <div class="meta-item">
-              <el-icon><Clock /></el-icon>
-              <span>{{ item.time }}</span>
-            </div>
-            <div class="meta-item">
-              <el-icon><Location /></el-icon>
-              <span>{{ item.venue }}</span>
-            </div>
-            <div class="meta-item">
-              <el-icon><User /></el-icon>
-              <span>{{ item.participants }}/{{ item.maxParticipants }}人</span>
-            </div>
-          </div>
-        </div>
-        <div class="activity-actions">
-          <el-button type="primary" :disabled="item.status === 'full'" @click="handleBook(item)">
-            {{ item.status === 'full' ? '已满员' : '立即预约' }}
-          </el-button>
-          <el-button @click="handleViewDetail(item)">查看详情</el-button>
-        </div>
-      </div>
+    <div v-if="activities.length > 0" class="activities-grid">
+      <ActivityCard
+        v-for="item in activities"
+        :key="item.id"
+        :activity="item"
+      />
+    </div>
+
+    <!-- 空状态 -->
+    <div v-else class="empty-state">
+      <el-empty description="暂无符合条件的活动">
+        <el-button type="primary" @click="handleReset">重置筛选条件</el-button>
+      </el-empty>
     </div>
 
     <!-- 分页 -->
-    <div class="pagination">
+    <div v-if="activities.length > 0" class="pagination-wrapper">
       <el-pagination
         v-model:current-page="currentPage"
         :page-size="pageSize"
         :total="total"
-        layout="prev, pager, next, jumper"
+        layout="total, prev, pager, next, jumper"
         @current-change="handlePageChange"
       />
     </div>
@@ -80,73 +101,141 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Clock, Location, User } from '@element-plus/icons-vue'
+import {
+  Basketball,
+  TrophyBase,
+  Football,
+  Sunny,
+  More,
+  RefreshLeft,
+  Trophy,
+  Timer,
+  Bicycle
+} from '@element-plus/icons-vue'
+import ActivityCard from '@/components/activity-card/index.vue'
+import { activities as mockActivities } from '@/mock/activities'
+
+const activeCategory = ref('all')
+
+const categories = ref([
+  { label: '全部活动', value: 'all', icon: 'Sunny' },
+  { label: '篮球', value: 'basketball', icon: 'Basketball' },
+  { label: '足球', value: 'football', icon: 'Football' },
+  { label: '羽毛球', value: 'badminton', icon: 'TrophyBase' },
+  { label: '乒乓球', value: 'tabletennis', icon: 'Trophy' },
+  { label: '网球', value: 'tennis', icon: 'TrophyBase' },
+  { label: '排球', value: 'volleyball', icon: 'Basketball' },
+  { label: '游泳', value: 'swimming', icon: 'Sunny' },
+  { label: '健身', value: 'fitness', icon: 'Timer' },
+  { label: '跑步', value: 'running', icon: 'Bicycle' },
+  { label: '武术', value: 'martialarts', icon: 'Trophy' },
+  { label: '其他', value: 'other', icon: 'More' }
+])
 
 const filterForm = ref({
-  type: '',
-  status: ''
+  status: '',
+  dateRange: [],
+  minParticipants: null,
+  maxParticipants: null,
+  activityType: ''
 })
 
 const currentPage = ref(1)
-const pageSize = ref(10)
-const total = ref(30)
+const pageSize = ref(12)
 
-const activities = ref([
-  {
-    id: 1,
-    title: '周末篮球友谊赛',
-    description: '欢迎所有篮球爱好者参加，不限水平，重在参与和交流',
-    time: '2026-01-18 14:00-16:00',
-    venue: '篮球馆A场',
-    participants: 8,
-    maxParticipants: 10,
-    status: 'open',
-    statusText: '报名中',
-    image: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=300'
-  },
-  {
-    id: 2,
-    title: '羽毛球训练营',
-    description: '专业教练指导，适合初学者和进阶者',
-    time: '2026-01-20 09:00-11:00',
-    venue: '羽毛球馆',
-    participants: 20,
-    maxParticipants: 20,
-    status: 'full',
-    statusText: '已满员',
-    image: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=300'
+// 筛选后的活动列表
+const filteredActivities = computed(() => {
+  let result = [...mockActivities]
+  
+  // 按分类筛选
+  if (activeCategory.value !== 'all') {
+    result = result.filter(item => item.category === activeCategory.value)
   }
-])
+  
+  // 按活动状态筛选
+  if (filterForm.value.status) {
+    result = result.filter(item => {
+      const activityDate = new Date(item.time)
+      const now = new Date()
+      
+      if (filterForm.value.status === 'open') {
+        // 报名中：未满员且未结束
+        return item.participants < item.maxParticipants && activityDate >= now
+      } else if (filterForm.value.status === 'full') {
+        // 已满员：参与人数达到上限
+        return item.participants >= item.maxParticipants && activityDate >= now
+      } else if (filterForm.value.status === 'closed') {
+        // 已结束：活动时间已过
+        return activityDate < now
+      }
+      return true
+    })
+  }
+  
+  // 按日期范围筛选
+  if (filterForm.value.dateRange && filterForm.value.dateRange.length === 2) {
+    const [startDate, endDate] = filterForm.value.dateRange
+    result = result.filter(item => {
+      const activityDate = new Date(item.time)
+      return activityDate >= startDate && activityDate <= endDate
+    })
+  }
+  
+  // 按人数范围筛选
+  if (filterForm.value.minParticipants !== null && filterForm.value.minParticipants > 0) {
+    result = result.filter(item => item.maxParticipants >= filterForm.value.minParticipants)
+  }
+  if (filterForm.value.maxParticipants !== null && filterForm.value.maxParticipants > 0) {
+    result = result.filter(item => item.maxParticipants <= filterForm.value.maxParticipants)
+  }
+  
+  // 按活动类型筛选
+  if (filterForm.value.activityType) {
+    result = result.filter(item => item.activityType === filterForm.value.activityType)
+  }
+  
+  return result
+})
 
-const handleSearch = () => {
-  ElMessage.success('搜索功能开发中')
+// 总数
+const total = computed(() => filteredActivities.value.length)
+
+// 当前页显示的活动
+const activities = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  const end = start + pageSize.value
+  return filteredActivities.value.slice(start, end)
+})
+
+// 监听筛选条件变化，重置到第一页
+watch([activeCategory, filterForm], () => {
+  currentPage.value = 1
+}, { deep: true })
+
+const handleCategoryChange = (category) => {
+  activeCategory.value = category
+  const categoryLabel = categories.value.find(c => c.value === category)?.label
+  ElMessage.success(`切换到：${categoryLabel}`)
 }
 
 const handleReset = () => {
-  filterForm.value = { type: '', status: '' }
-}
-
-const handleBook = (item) => {
-  ElMessage.success(`预约活动：${item.title}`)
-}
-
-const handleViewDetail = (item) => {
-  ElMessage.info(`查看详情：${item.title}`)
+  filterForm.value = {
+    status: '',
+    dateRange: [],
+    minParticipants: null,
+    maxParticipants: null,
+    activityType: ''
+  }
+  activeCategory.value = 'all'
+  ElMessage.info('已重置筛选条件')
 }
 
 const handlePageChange = (page) => {
   currentPage.value = page
-}
-
-const getStatusType = (status) => {
-  const typeMap = {
-    open: 'success',
-    full: 'warning',
-    closed: 'info'
-  }
-  return typeMap[status] || 'info'
+  // 滚动到顶部
+  window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 </script>
 
