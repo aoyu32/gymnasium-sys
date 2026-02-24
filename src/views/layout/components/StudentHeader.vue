@@ -26,7 +26,7 @@
       </nav>
 
       <!-- 搜索框 -->
-      <div class="header-search">
+      <div v-if="!isSearchPage" class="header-search">
         <el-input
           v-model="searchKeyword"
           placeholder="搜索活动、场地..."
@@ -140,6 +140,9 @@ const unreadCount = ref(3)
 
 const userInfo = computed(() => userStore.userInfo)
 
+// 判断是否在搜索页面
+const isSearchPage = computed(() => route.path === '/student/search')
+
 const navItems = [
   { path: '/student/home', label: '首页', icon: 'HomeFilled' },
   { path: '/student/activities', label: '活动中心', icon: 'Calendar' },
@@ -189,8 +192,13 @@ const goHome = () => {
 
 const handleSearch = () => {
   if (searchKeyword.value.trim()) {
-    ElMessage.info(`搜索: ${searchKeyword.value}`)
-    // TODO: 实现搜索功能
+    // 在新标签页打开搜索页面
+    const routeUrl = router.resolve({
+      path: '/student/search',
+      query: { keyword: searchKeyword.value }
+    })
+    window.open(routeUrl.href, '_blank')
+    searchKeyword.value = ''
   }
 }
 

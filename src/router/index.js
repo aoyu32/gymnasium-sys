@@ -90,6 +90,12 @@ const routes = [
         meta: { title: '帖子详情' }
       },
       {
+        path: 'search',
+        name: 'StudentSearch',
+        component: () => import('@/views/student/search/index.vue'),
+        meta: { title: '搜索' }
+      },
+      {
         path: 'profile',
         name: 'StudentProfile',
         component: () => import('@/views/student/profile/index.vue'),
