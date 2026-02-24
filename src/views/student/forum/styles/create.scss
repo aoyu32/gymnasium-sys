@@ -1,0 +1,81 @@
+.forum-create-post {
+    background-color: #f5f7fa;
+    min-height: calc(100vh - 120px);
+
+    .create-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 8px;
+        padding: 32px;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #ebeef5;
+
+            h1 {
+                font-size: 24px;
+                font-weight: 600;
+                color: #303133;
+                margin: 0;
+            }
+        }
+
+        .post-form {
+            .el-form-item {
+                margin-bottom: 24px;
+
+                :deep(.el-form-item__label) {
+                    font-weight: 500;
+                    color: #303133;
+                }
+
+                :deep(.el-input__inner) {
+                    font-size: 14px;
+                }
+
+                :deep(.el-textarea__inner) {
+                    font-size: 14px;
+                    line-height: 1.6;
+                }
+            }
+
+            .el-upload__tip {
+                font-size: 13px;
+                color: #909399;
+                margin-top: 8px;
+            }
+
+            .el-button {
+                min-width: 120px;
+            }
+        }
+    }
+}
+
+// Markdown编辑器样式调整
+:deep(.md-editor) {
+    border-radius: 8px;
+    border: 1px solid #dcdfe6;
+
+    &:hover {
+        border-color: #c0c4cc;
+    }
+
+    &:focus-within {
+        border-color: #f5222d;
+    }
+}
+
+:deep(.md-editor-preview-wrapper) {
+    padding: 16px;
+}
+
+:deep(.md-editor-input-wrapper) {
+    padding: 16px;
+}

@@ -1,151 +1,76 @@
 .student-forum {
-  .page-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 32px;
+  background-color: #f5f7fa;
+  min-height: calc(100vh - 120px);
 
-    h1 {
-      font-size: 28px;
-      font-weight: 600;
-      color: #262626;
-      margin-bottom: 8px;
-    }
-
-    p {
-      font-size: 14px;
-      color: #8c8c8c;
-    }
+  .forum-container {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 20px;
+    max-width: 1400px;
+    margin: 0 auto;
   }
 
-  .forum-content {
-    background: #fff;
-    border-radius: 12px;
-    padding: 24px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  }
+  // 左侧主内容区
+  .forum-main {
+    .category-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 20px;
+      padding: 16px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
 
-  .category-tabs {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 24px;
-    padding-bottom: 16px;
-    border-bottom: 1px solid #f0f0f0;
+      .category-item {
+        padding: 8px 20px;
+        border-radius: 20px;
+        font-size: 14px;
+        color: #606266;
+        background-color: #f5f7fa;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        user-select: none;
 
-    .category-item {
-      padding: 8px 20px;
-      border-radius: 20px;
-      cursor: pointer;
-      transition: all 0.3s;
-      font-size: 14px;
-      color: #595959;
+        &:hover {
+          background-color: #e4e7ed;
+          color: #303133;
+        }
 
-      &:hover {
-        background: #f5f5f5;
-      }
-
-      &.active {
-        background: #ffccc7;
-        color: #f5222d;
-        font-weight: 500;
+        &.active {
+          background-color: #f5222d;
+          color: white;
+        }
       }
     }
   }
 
-  .posts-list {
+  // 右侧边栏
+  .forum-sidebar {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 20px;
+    position: sticky;
+    top: 84px;
+    align-self: flex-start;
 
-    .post-item {
-      display: flex;
-      gap: 16px;
-      padding: 20px;
+    .publish-card {
+      background: white;
       border-radius: 8px;
-      transition: background 0.3s;
+      padding: 20px;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    }
+  }
+}
 
-      &:hover {
-        background: #fafafa;
-      }
+// 响应式设计
+@media (max-width: 1200px) {
+  .student-forum {
+    .forum-container {
+      grid-template-columns: 1fr;
 
-      .post-avatar {
-        flex-shrink: 0;
-      }
-
-      .post-content {
-        flex: 1;
-
-        .post-header {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          margin-bottom: 12px;
-
-          .author {
-            font-size: 15px;
-            font-weight: 500;
-            color: #262626;
-          }
-
-          .time {
-            font-size: 13px;
-            color: #8c8c8c;
-          }
-        }
-
-        .post-title {
-          font-size: 16px;
-          font-weight: 500;
-          color: #262626;
-          margin-bottom: 8px;
-        }
-
-        .post-text {
-          font-size: 14px;
-          color: #595959;
-          line-height: 1.6;
-          margin-bottom: 12px;
-        }
-
-        .post-images {
-          display: flex;
-          gap: 8px;
-          margin-bottom: 12px;
-
-          img {
-            width: 120px;
-            height: 120px;
-            object-fit: cover;
-            border-radius: 8px;
-            cursor: pointer;
-          }
-        }
-
-        .post-footer {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding-top: 12px;
-          border-top: 1px solid #f0f0f0;
-
-          .post-stats {
-            display: flex;
-            gap: 16px;
-            font-size: 13px;
-            color: #8c8c8c;
-
-            span {
-              display: flex;
-              align-items: center;
-              gap: 4px;
-            }
-          }
-
-          .post-actions {
-            display: flex;
-            gap: 8px;
-          }
-        }
+      .forum-sidebar {
+        order: -1;
       }
     }
   }

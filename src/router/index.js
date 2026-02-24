@@ -78,6 +78,18 @@ const routes = [
         meta: { title: '体育论坛' }
       },
       {
+        path: 'forum/create',
+        name: 'ForumCreatePost',
+        component: () => import('@/views/student/forum/create.vue'),
+        meta: { title: '发布帖子' }
+      },
+      {
+        path: 'forum/:id',
+        name: 'ForumPostDetail',
+        component: () => import('@/views/student/forum/detail.vue'),
+        meta: { title: '帖子详情' }
+      },
+      {
         path: 'profile',
         name: 'StudentProfile',
         component: () => import('@/views/student/profile/index.vue'),
