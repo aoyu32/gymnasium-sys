@@ -62,10 +62,6 @@
                 <el-icon><User /></el-icon>
                 个人中心
               </el-dropdown-item>
-              <el-dropdown-item command="settings">
-                <el-icon><Setting /></el-icon>
-                账号设置
-              </el-dropdown-item>
               <el-dropdown-item divided command="logout">
                 <el-icon><SwitchButton /></el-icon>
                 退出登录
@@ -123,7 +119,6 @@ import {
   Search,
   Bell,
   ArrowDown,
-  Setting,
   SwitchButton,
   SuccessFilled,
   WarningFilled,
@@ -210,9 +205,6 @@ const handleCommand = (command) => {
   switch (command) {
     case 'profile':
       router.push('/student/profile')
-      break
-    case 'settings':
-      ElMessage.info('账号设置功能开发中')
       break
     case 'logout':
       ElMessageBox.confirm('确定要退出登录吗？', '提示', {
