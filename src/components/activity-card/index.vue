@@ -35,8 +35,10 @@
 
 <script setup>
 import { computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { Clock, Location, User } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
+
+const router = useRouter()
 
 const props = defineProps({
   activity: {
@@ -81,7 +83,7 @@ const getStatusText = computed(() => {
 })
 
 const handleViewDetail = () => {
-  ElMessage.info('查看活动详情功能开发中')
+  router.push(`/student/activities/${props.activity.id}`)
 }
 </script>
 

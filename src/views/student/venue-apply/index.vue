@@ -1,10 +1,5 @@
 <template>
   <div class="student-venue-apply">
-    <div class="page-header">
-      <h1>场地申请</h1>
-      <p>选择合适的场地，提交使用申请</p>
-    </div>
-
     <div class="content-wrapper">
       <!-- 场地列表 -->
       <div class="venue-list">

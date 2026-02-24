@@ -42,6 +42,12 @@ const routes = [
         meta: { title: '活动中心' }
       },
       {
+        path: 'activities/:id',
+        name: 'ActivityDetail',
+        component: () => import('@/views/student/activities/detail.vue'),
+        meta: { title: '活动详情' }
+      },
+      {
         path: 'venue-apply',
         name: 'StudentVenueApply',
         component: () => import('@/views/student/venue-apply/index.vue'),

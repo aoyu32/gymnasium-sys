@@ -1,10 +1,5 @@
 <template>
   <div class="student-equipment">
-    <div class="page-header">
-      <h1>器材借还</h1>
-      <p>在线借用体育器材，方便快捷</p>
-    </div>
-
     <el-tabs v-model="activeTab">
       <!-- 器材列表 -->
       <el-tab-pane label="器材借用" name="borrow">

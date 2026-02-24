@@ -1,8 +1,6 @@
 <template>
   <div class="student-forum">
-    <div class="page-header">
-      <h1>体育论坛</h1>
-      <p>分享运动心得，结识运动伙伴</p>
+    <div class="forum-header">
       <el-button type="primary" @click="showPostDialog = true">
         <el-icon><Edit /></el-icon>
         发布帖子
