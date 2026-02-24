@@ -8,7 +8,11 @@ export const venues = [
     price: 50,
     status: 'available',
     category: 'basketball',
-    image: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=400'
+    image: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=400',
+    areas: [
+      { id: 1, name: 'A1场地', inUse: false, capacity: 10 },
+      { id: 2, name: 'A2场地', inUse: true, capacity: 10 }
+    ]
   },
   {
     id: 2,
@@ -18,7 +22,13 @@ export const venues = [
     price: 30,
     status: 'available',
     category: 'badminton',
-    image: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=400'
+    image: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=400',
+    areas: [
+      { id: 1, name: '1号场地', inUse: false, capacity: 4 },
+      { id: 2, name: '2号场地', inUse: false, capacity: 4 },
+      { id: 3, name: '3号场地', inUse: true, capacity: 4 },
+      { id: 4, name: '4号场地', inUse: false, capacity: 4 }
+    ]
   },
   {
     id: 3,
@@ -28,7 +38,10 @@ export const venues = [
     price: 100,
     status: 'busy',
     category: 'football',
-    image: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=400'
+    image: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=400',
+    areas: [
+      { id: 1, name: '全场', inUse: true, capacity: 30 }
+    ]
   },
   {
     id: 4,
@@ -38,7 +51,13 @@ export const venues = [
     price: 40,
     status: 'available',
     category: 'tennis',
-    image: 'https://images.unsplash.com/photo-1622279457486-62dcc4a431d6?w=400'
+    image: 'https://images.unsplash.com/photo-1622279457486-62dcc4a431d6?w=400',
+    areas: [
+      { id: 1, name: '1号场地', inUse: false, capacity: 2 },
+      { id: 2, name: '2号场地', inUse: true, capacity: 2 },
+      { id: 3, name: '3号场地', inUse: false, capacity: 2 },
+      { id: 4, name: '4号场地', inUse: false, capacity: 2 }
+    ]
   },
   {
     id: 5,
@@ -48,7 +67,11 @@ export const venues = [
     price: 20,
     status: 'available',
     category: 'swimming',
-    image: 'https://images.unsplash.com/photo-1519315901367-f34ff9154487?w=400'
+    image: 'https://images.unsplash.com/photo-1519315901367-f34ff9154487?w=400',
+    areas: [
+      { id: 1, name: '深水区', inUse: false, capacity: 30 },
+      { id: 2, name: '浅水区', inUse: false, capacity: 20 }
+    ]
   },
   {
     id: 6,
@@ -58,7 +81,8 @@ export const venues = [
     price: 15,
     status: 'available',
     category: 'tabletennis',
-    image: 'https://images.unsplash.com/photo-1609710228159-0fa9bd7c0827?w=400'
+    image: 'https://images.unsplash.com/photo-1609710228159-0fa9bd7c0827?w=400',
+    areas: []
   },
   {
     id: 7,
@@ -68,7 +92,11 @@ export const venues = [
     price: 50,
     status: 'available',
     category: 'basketball',
-    image: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=400'
+    image: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=400',
+    areas: [
+      { id: 1, name: 'B1场地', inUse: false, capacity: 10 },
+      { id: 2, name: 'B2场地', inUse: false, capacity: 10 }
+    ]
   },
   {
     id: 8,
@@ -78,7 +106,11 @@ export const venues = [
     price: 40,
     status: 'busy',
     category: 'volleyball',
-    image: 'https://images.unsplash.com/photo-1612872087720-bb876e2e67d1?w=400'
+    image: 'https://images.unsplash.com/photo-1612872087720-bb876e2e67d1?w=400',
+    areas: [
+      { id: 1, name: '1号场地', inUse: true, capacity: 12 },
+      { id: 2, name: '2号场地', inUse: true, capacity: 12 }
+    ]
   },
   {
     id: 9,
@@ -88,7 +120,8 @@ export const venues = [
     price: 25,
     status: 'available',
     category: 'fitness',
-    image: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400'
+    image: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400',
+    areas: []
   },
   {
     id: 10,
@@ -98,7 +131,8 @@ export const venues = [
     price: 0,
     status: 'available',
     category: 'running',
-    image: 'https://images.unsplash.com/photo-1552674605-db6ffd4facb5?w=400'
+    image: 'https://images.unsplash.com/photo-1552674605-db6ffd4facb5?w=400',
+    areas: []
   },
   {
     id: 11,
@@ -108,7 +142,8 @@ export const venues = [
     price: 35,
     status: 'available',
     category: 'martialarts',
-    image: 'https://images.unsplash.com/photo-1555597673-b21d5c935865?w=400'
+    image: 'https://images.unsplash.com/photo-1555597673-b21d5c935865?w=400',
+    areas: []
   },
   {
     id: 12,
@@ -118,6 +153,7 @@ export const venues = [
     price: 20,
     status: 'available',
     category: 'other',
-    image: 'https://images.unsplash.com/photo-1604147706283-d7119b5b822c?w=400'
+    image: 'https://images.unsplash.com/photo-1604147706283-d7119b5b822c?w=400',
+    areas: []
   }
 ]

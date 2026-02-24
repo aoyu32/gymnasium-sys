@@ -16,11 +16,10 @@
         </div>
         <el-button 
           type="primary" 
-          size="small" 
-          :disabled="venue.status === 'busy'"
-          @click="handleApply"
+          size="small"
+          @click="handleViewDetail"
         >
-          {{ venue.status === 'available' ? '立即申请' : '使用中' }}
+          查看详情
         </el-button>
       </div>
     </div>
@@ -33,15 +32,17 @@ import { useRouter } from 'vue-router'
 
 const router = useRouter()
 
-defineProps({
+const props = defineProps({
   venue: {
     type: Object,
     required: true
   }
 })
 
-const handleApply = () => {
-  router.push('/student/venue-apply')
+const emit = defineEmits(['view-detail'])
+
+const handleViewDetail = () => {
+  router.push(`/student/venue-apply/${props.venue.id}`)
 }
 </script>
 

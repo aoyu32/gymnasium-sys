@@ -54,10 +54,22 @@ const routes = [
         meta: { title: '场地申请' }
       },
       {
+        path: 'venue-apply/:id',
+        name: 'VenueDetail',
+        component: () => import('@/views/student/venue-apply/detail.vue'),
+        meta: { title: '场地详情' }
+      },
+      {
         path: 'equipment',
         name: 'StudentEquipment',
         component: () => import('@/views/student/equipment/index.vue'),
         meta: { title: '器材借还' }
+      },
+      {
+        path: 'equipment/:id',
+        name: 'EquipmentDetail',
+        component: () => import('@/views/student/equipment/detail.vue'),
+        meta: { title: '器材详情' }
       },
       {
         path: 'forum',
