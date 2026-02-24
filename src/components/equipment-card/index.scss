@@ -1,0 +1,96 @@
+.equipment-card {
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    cursor: pointer;
+
+    &:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+    }
+
+    .equipment-image {
+        position: relative;
+        width: 100%;
+        height: 200px;
+        overflow: hidden;
+
+        img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+
+        &:hover img {
+            transform: scale(1.05);
+        }
+
+        .equipment-status {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+            color: white;
+
+            &.available {
+                background-color: #67c23a;
+            }
+
+            &.unavailable {
+                background-color: #909399;
+            }
+        }
+    }
+
+    .equipment-info {
+        padding: 16px;
+
+        h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #303133;
+            margin: 0 0 8px 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .equipment-desc {
+            font-size: 13px;
+            color: #909399;
+            margin: 0 0 12px 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .equipment-meta {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 12px;
+
+            .meta-item {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                font-size: 13px;
+                color: #606266;
+
+                .el-icon {
+                    font-size: 14px;
+                    color: #409eff;
+                }
+            }
+        }
+
+        .el-button {
+            width: 100%;
+        }
+    }
+}

@@ -1,0 +1,303 @@
+<template>
+  <div class="equipment-detail">
+    <div v-if="equipment" class="detail-container">
+      <!-- 左侧：器材信息 -->
+      <div class="equipment-info-section">
+        <!-- 器材封面 -->
+        <div class="equipment-cover">
+          <img :src="equipment.image" :alt="equipment.name" />
+          <div class="cover-overlay">
+            <div class="equipment-tag" :class="equipment.stock > 0 ? 'available' : 'unavailable'">
+              {{ equipment.stock > 0 ? '可借' : '已借完' }}
+            </div>
+          </div>
+        </div>
+
+        <!-- 器材基本信息 -->
+        <div class="info-card">
+          <div class="card-header">
+            <h1>{{ equipment.name }}</h1>
+            <el-tag :type="equipment.stock > 0 ? 'success' : 'info'" size="large">
+              {{ equipment.stock > 0 ? '可借' : '已借完' }}
+            </el-tag>
+          </div>
+
+          <el-descriptions :column="1" border class="equipment-descriptions">
+            <el-descriptions-item label="器材分类">
+              <el-icon><Box /></el-icon>
+              {{ getCategoryLabel }}
+            </el-descriptions-item>
+            <el-descriptions-item label="库存数量">
+              <el-icon><Goods /></el-icon>
+              {{ equipment.stock }}/{{ equipment.total }}件
+            </el-descriptions-item>
+            <el-descriptions-item label="器材状态">
+              <el-tag type="success" effect="plain">{{ equipment.conditionText }}</el-tag>
+            </el-descriptions-item>
+            <el-descriptions-item label="品牌规格">
+              <div v-if="equipment.brands && equipment.brands.length > 0" class="brand-list">
+                <div v-for="brand in equipment.brands" :key="brand.id" class="brand-item">
+                  <div class="brand-info">
+                    <span class="brand-name">{{ brand.name }}</span>
+                    <span class="brand-model">{{ brand.model }}</span>
+                  </div>
+                  <div class="brand-stock">
+                    <span>库存{{ brand.stock }}件</span>
+                    <el-tag :type="brand.stock > 0 ? 'success' : 'info'" size="small" effect="plain">
+                      {{ brand.stock > 0 ? '可借' : '已借完' }}
+                    </el-tag>
+                  </div>
+                </div>
+              </div>
+              <span v-else>无品牌信息</span>
+            </el-descriptions-item>
+          </el-descriptions>
+        </div>
+
+        <!-- 器材描述 -->
+        <div class="info-card">
+          <h2>器材描述</h2>
+          <div class="equipment-description">
+            <p>{{ equipmentDescription }}</p>
+          </div>
+        </div>
+
+        <!-- 借用须知 -->
+        <div class="info-card">
+          <h2>借用须知</h2>
+          <ul class="notice-list">
+            <li>请爱护器材，如有损坏需照价赔偿</li>
+            <li>借用期限最长为7天，逾期将影响信用记录</li>
+            <li>归还时请检查器材完好性，如有问题及时报告</li>
+            <li>请勿将器材转借他人使用</li>
+            <li>如需延期，请提前申请</li>
+            <li>归还时请清洁器材，保持卫生</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- 右侧：借用表单 -->
+      <div class="borrow-form-section">
+        <div class="form-card">
+          <h2>借用申请</h2>
+          <el-form
+            ref="formRef"
+            :model="borrowForm"
+            :rules="rules"
+            label-width="100px"
+            label-position="top"
+          >
+            <!-- 品牌规格选择（如果有多个品牌） -->
+            <el-form-item v-if="equipment.brands && equipment.brands.length > 0" label="选择品牌规格" prop="brandId">
+              <el-select v-model="borrowForm.brandId" placeholder="请选择品牌规格" style="width: 100%" @change="handleBrandChange">
+                <el-option
+                  v-for="brand in equipment.brands"
+                  :key="brand.id"
+                  :label="`${brand.name} ${brand.model} (库存${brand.stock}件)`"
+                  :value="brand.id"
+                  :disabled="brand.stock === 0"
+                >
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>{{ brand.name }} {{ brand.model }}</span>
+                    <el-tag
+                      :type="brand.stock > 0 ? 'success' : 'info'"
+                      size="small"
+                      style="margin-left: 10px"
+                    >
+                      库存{{ brand.stock }}件
+                    </el-tag>
+                  </div>
+                </el-option>
+              </el-select>
+            </el-form-item>
+
+            <el-form-item label="借用数量" prop="quantity">
+              <el-input-number
+                v-model="borrowForm.quantity"
+                :min="1"
+                :max="maxQuantity"
+                style="width: 100%"
+              />
+              <div class="form-tip">最多可借{{ maxQuantity }}件</div>
+            </el-form-item>
+
+            <el-form-item label="借用天数" prop="days">
+              <el-input-number
+                v-model="borrowForm.days"
+                :min="1"
+                :max="7"
+                style="width: 100%"
+              />
+              <div class="form-tip">最长可借7天</div>
+            </el-form-item>
+
+            <el-form-item label="预计归还日期">
+              <el-input :value="expectedReturnDate" disabled />
+            </el-form-item>
+
+            <el-form-item label="借用人姓名" prop="name">
+              <el-input v-model="borrowForm.name" placeholder="请输入您的姓名" />
+            </el-form-item>
+
+            <el-form-item label="联系电话" prop="phone">
+              <el-input v-model="borrowForm.phone" placeholder="请输入联系电话" />
+            </el-form-item>
+
+            <el-form-item label="学号/工号" prop="studentId">
+              <el-input v-model="borrowForm.studentId" placeholder="请输入学号或工号" />
+            </el-form-item>
+
+            <el-form-item label="借用理由" prop="reason">
+              <el-input
+                v-model="borrowForm.reason"
+                type="textarea"
+                :rows="4"
+                placeholder="请简要说明借用目的"
+              />
+            </el-form-item>
+
+            <el-form-item>
+              <el-button
+                type="primary"
+                size="large"
+                style="width: 100%"
+                :disabled="equipment.stock === 0"
+                @click="handleSubmit"
+              >
+                {{ equipment.stock === 0 ? '暂无库存' : '提交申请' }}
+              </el-button>
+            </el-form-item>
+          </el-form>
+
+          <!-- 温馨提示 -->
+          <el-alert
+            title="温馨提示"
+            type="info"
+            :closable="false"
+            show-icon
+          >
+            <p>提交申请后，请等待审核通过。审核结果将通过短信或邮件通知您。</p>
+          </el-alert>
+        </div>
+      </div>
+    </div>
+
+    <!-- 加载状态 -->
+    <div v-else class="loading-state">
+      <el-empty description="器材不存在或已被删除">
+        <el-button type="primary" @click="goBack">返回器材列表</el-button>
+      </el-empty>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import { Box, Goods } from '@element-plus/icons-vue'
+import { equipments } from '@/mock/equipments'
+
+const route = useRoute()
+const router = useRouter()
+const formRef = ref(null)
+
+// 获取器材详情
+const equipment = ref(null)
+
+onMounted(() => {
+  const id = parseInt(route.params.id)
+  equipment.value = equipments.find(item => item.id === id)
+})
+
+// 分类标签映射
+const categoryMap = {
+  ball: '球类',
+  racket: '球拍',
+  protection: '护具',
+  other: '其他'
+}
+
+const getCategoryLabel = computed(() => {
+  return categoryMap[equipment.value?.category] || '其他'
+})
+
+// 器材描述
+const equipmentDescription = computed(() => {
+  const descriptions = {
+    ball: '本器材为专业运动用球，经过严格质量检测，适合各类训练和比赛使用。材质优良，手感舒适，耐用性强。',
+    racket: '专业运动球拍，采用优质材料制作，重量适中，手感舒适。适合不同水平的运动爱好者使用，可提升运动表现。',
+    protection: '专业运动护具，提供有效保护，减少运动伤害风险。材质透气舒适，不影响运动表现。',
+    other: '专业运动器材，质量可靠，使用方便。适合各类体育活动使用。'
+  }
+  return descriptions[equipment.value?.category] || descriptions.other
+})
+
+// 借用表单
+const borrowForm = ref({
+  brandId: '',
+  quantity: 1,
+  days: 1,
+  name: '',
+  phone: '',
+  studentId: '',
+  reason: ''
+})
+
+// 最大可借数量
+const maxQuantity = computed(() => {
+  if (!equipment.value) return 1
+  if (borrowForm.value.brandId) {
+    const brand = equipment.value.brands?.find(b => b.id === borrowForm.value.brandId)
+    return brand ? brand.stock : equipment.value.stock
+  }
+  return equipment.value.stock
+})
+
+// 预计归还日期
+const expectedReturnDate = computed(() => {
+  const today = new Date()
+  const returnDate = new Date(today.getTime() + borrowForm.value.days * 24 * 60 * 60 * 1000)
+  return returnDate.toISOString().split('T')[0]
+})
+
+const rules = {
+  brandId: [{ required: true, message: '请选择品牌规格', trigger: 'change' }],
+  quantity: [{ required: true, message: '请输入借用数量', trigger: 'blur' }],
+  days: [{ required: true, message: '请输入借用天数', trigger: 'blur' }],
+  name: [{ required: true, message: '请输入姓名', trigger: 'blur' }],
+  phone: [
+    { required: true, message: '请输入联系电话', trigger: 'blur' },
+    { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号码', trigger: 'blur' }
+  ],
+  studentId: [{ required: true, message: '请输入学号或工号', trigger: 'blur' }],
+  reason: [{ required: true, message: '请填写借用理由', trigger: 'blur' }]
+}
+
+const handleBrandChange = () => {
+  // 当品牌改变时，重置数量为1
+  borrowForm.value.quantity = 1
+}
+
+const handleSubmit = async () => {
+  if (!formRef.value) return
+  
+  await formRef.value.validate((valid) => {
+    if (valid) {
+      ElMessage.success('借用申请提交成功，请等待审核')
+      // 这里后期对接API
+      setTimeout(() => {
+        router.push('/student/equipment')
+      }, 1500)
+    }
+  })
+}
+
+const goBack = () => {
+  router.push('/student/equipment')
+}
+</script>
+
+<style lang="scss" scoped>
+@use './styles/detail.scss';
+</style>
