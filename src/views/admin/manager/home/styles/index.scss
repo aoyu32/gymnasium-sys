@@ -1,0 +1,81 @@
+.manager-home {
+    .stats-row {
+        margin-bottom: 16px;
+    }
+
+    .stat-card {
+        .stat-content {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+
+            .stat-icon {
+                width: 64px;
+                height: 64px;
+                border-radius: 8px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .stat-info {
+                flex: 1;
+
+                .stat-label {
+                    font-size: 14px;
+                    color: #8c8c8c;
+                    margin-bottom: 8px;
+                }
+
+                .stat-value {
+                    font-size: 28px;
+                    font-weight: 600;
+                    color: #262626;
+                }
+            }
+        }
+    }
+
+    .content-row {
+        margin-bottom: 16px;
+    }
+
+    .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-weight: 600;
+
+        .pagination-btns {
+            display: flex;
+            gap: 4px;
+        }
+    }
+
+    .usage-chart {
+        .usage-item {
+            margin-bottom: 20px;
+
+            &:last-child {
+                margin-bottom: 0;
+            }
+
+            .usage-info {
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 8px;
+
+                .usage-name {
+                    font-size: 14px;
+                    color: #262626;
+                }
+
+                .usage-percent {
+                    font-size: 14px;
+                    font-weight: 600;
+                    color: #262626;
+                }
+            }
+        }
+    }
+}
