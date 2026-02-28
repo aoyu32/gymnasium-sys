@@ -104,32 +104,96 @@ const routes = [
     ]
   },
   {
-    path: '/manager',
-    name: 'ManagerLayout',
-    component: () => import('@/views/layout/ManagerLayout.vue'),
-    redirect: '/manager/home',
-    children: [
-      {
-        path: 'home',
-        name: 'ManagerHome',
-        component: () => import('@/views/manager/home/index.vue'),
-        meta: { title: '工作台' }
-      }
-    ]
-  },
-  {
     path: '/admin',
     name: 'AdminLayout',
     component: () => import('@/views/layout/AdminLayout.vue'),
-    redirect: '/admin/home',
+    redirect: '/admin/manager/home',
     children: [
+      // 场地负责人模块
       {
-        path: 'home',
-        name: 'AdminHome',
-        component: () => import('@/views/admin/home/index.vue'),
-        meta: { title: '控制台' }
+        path: 'manager/home',
+        name: 'ManagerHome',
+        component: () => import('@/views/admin/manager/home/index.vue'),
+        meta: { title: '工作台' }
+      },
+      {
+        path: 'manager/venues',
+        name: 'ManagerVenues',
+        redirect: '/admin/manager/venues/info',
+        meta: { title: '场地管理' },
+        children: [
+          {
+            path: 'info',
+            name: 'ManagerVenuesInfo',
+            component: () => import('@/views/admin/manager/venues/info.vue'),
+            meta: { title: '场地信息管理' }
+          },
+          {
+            path: 'applications',
+            name: 'ManagerVenuesApplications',
+            component: () => import('@/views/admin/manager/venues/applications.vue'),
+            meta: { title: '场地申请管理' }
+          }
+        ]
+      },
+      {
+        path: 'manager/activities',
+        name: 'ManagerActivities',
+        component: () => import('@/views/admin/manager/activities/index.vue'),
+        meta: { title: '活动管理' }
+      },
+      {
+        path: 'manager/equipment',
+        name: 'ManagerEquipment',
+        component: () => import('@/views/admin/manager/equipment/index.vue'),
+        meta: { title: '器材管理' }
+      },
+      // 系统管理员模块
+      {
+        path: 'system/home',
+        name: 'SystemHome',
+        component: () => import('@/views/admin/system/home/index.vue'),
+        meta: { title: '工作台' }
+      },
+      {
+        path: 'system/students',
+        name: 'SystemStudents',
+        component: () => import('@/views/admin/system/students/index.vue'),
+        meta: { title: '学生管理' }
+      },
+      {
+        path: 'system/managers',
+        name: 'SystemManagers',
+        component: () => import('@/views/admin/system/managers/index.vue'),
+        meta: { title: '负责人管理' }
+      },
+      {
+        path: 'system/equipment',
+        name: 'SystemEquipment',
+        component: () => import('@/views/admin/system/equipment/index.vue'),
+        meta: { title: '器材管理' }
+      },
+      {
+        path: 'system/forum',
+        name: 'SystemForum',
+        component: () => import('@/views/admin/system/forum/index.vue'),
+        meta: { title: '论坛管理' }
       }
     ]
+  },
+  // 重定向旧的manager路径到新的admin/manager路径
+  {
+    path: '/manager/:pathMatch(.*)*',
+    redirect: to => {
+      return `/admin/manager/${to.params.pathMatch}`
+    }
+  },
+  // 重定向旧的system路径到新的admin/system路径
+  {
+    path: '/system/:pathMatch(.*)*',
+    redirect: to => {
+      return `/admin/system/${to.params.pathMatch}`
+    }
   },
   {
     path: '/',
