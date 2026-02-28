@@ -15,8 +15,8 @@ export const venues = [
       'https://images.unsplash.com/photo-1608245449230-4ac19066d2d0?w=800'
     ],
     areas: [
-      { id: 1, name: 'A1场地', inUse: false, capacity: 10 },
-      { id: 2, name: 'A2场地', inUse: true, capacity: 10 }
+      { id: 1, name: 'A1场地', inUse: false, maintenance: false, capacity: 10 },
+      { id: 2, name: 'A2场地', inUse: true, maintenance: false, capacity: 10 }
     ]
   },
   {
@@ -25,7 +25,7 @@ export const venues = [
     description: '8片标准羽毛球场地',
     capacity: 16,
     price: 30,
-    status: 'available',
+    status: 'partial_maintenance',
     category: 'badminton',
     image: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=400',
     images: [
@@ -34,10 +34,10 @@ export const venues = [
       'https://images.unsplash.com/photo-1553778263-73a83bab9b0c?w=800'
     ],
     areas: [
-      { id: 1, name: '1号场地', inUse: false, capacity: 4 },
-      { id: 2, name: '2号场地', inUse: false, capacity: 4 },
-      { id: 3, name: '3号场地', inUse: true, capacity: 4 },
-      { id: 4, name: '4号场地', inUse: false, capacity: 4 }
+      { id: 1, name: '1号场地', inUse: false, maintenance: false, capacity: 4 },
+      { id: 2, name: '2号场地', inUse: false, maintenance: true, capacity: 4 },
+      { id: 3, name: '3号场地', inUse: true, maintenance: false, capacity: 4 },
+      { id: 4, name: '4号场地', inUse: false, maintenance: false, capacity: 4 }
     ]
   },
   {
@@ -46,7 +46,7 @@ export const venues = [
     description: '标准11人制足球场',
     capacity: 30,
     price: 100,
-    status: 'busy',
+    status: 'maintenance',
     category: 'football',
     image: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=400',
     images: [
@@ -55,7 +55,7 @@ export const venues = [
       'https://images.unsplash.com/photo-1589487391730-58f20eb2c308?w=800'
     ],
     areas: [
-      { id: 1, name: '全场', inUse: true, capacity: 30 }
+      { id: 1, name: '全场', inUse: false, maintenance: true, capacity: 30 }
     ]
   },
   {
@@ -73,10 +73,10 @@ export const venues = [
       'https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?w=800'
     ],
     areas: [
-      { id: 1, name: '1号场地', inUse: false, capacity: 2 },
-      { id: 2, name: '2号场地', inUse: true, capacity: 2 },
-      { id: 3, name: '3号场地', inUse: false, capacity: 2 },
-      { id: 4, name: '4号场地', inUse: false, capacity: 2 }
+      { id: 1, name: '1号场地', inUse: false, maintenance: false, capacity: 2 },
+      { id: 2, name: '2号场地', inUse: true, maintenance: false, capacity: 2 },
+      { id: 3, name: '3号场地', inUse: false, maintenance: false, capacity: 2 },
+      { id: 4, name: '4号场地', inUse: false, maintenance: false, capacity: 2 }
     ]
   },
   {
@@ -94,8 +94,8 @@ export const venues = [
       'https://images.unsplash.com/photo-1530549387789-4c1017266635?w=800'
     ],
     areas: [
-      { id: 1, name: '深水区', inUse: false, capacity: 30 },
-      { id: 2, name: '浅水区', inUse: false, capacity: 20 }
+      { id: 1, name: '深水区', inUse: false, maintenance: false, capacity: 30 },
+      { id: 2, name: '浅水区', inUse: false, maintenance: false, capacity: 20 }
     ]
   },
   {
@@ -127,8 +127,8 @@ export const venues = [
       'https://images.unsplash.com/photo-1519766304817-4f37bda74a26?w=800'
     ],
     areas: [
-      { id: 1, name: 'B1场地', inUse: false, capacity: 10 },
-      { id: 2, name: 'B2场地', inUse: false, capacity: 10 }
+      { id: 1, name: 'B1场地', inUse: false, maintenance: false, capacity: 10 },
+      { id: 2, name: 'B2场地', inUse: false, maintenance: false, capacity: 10 }
     ]
   },
   {
@@ -137,7 +137,7 @@ export const venues = [
     description: '4片标准排球场地',
     capacity: 24,
     price: 40,
-    status: 'busy',
+    status: 'available',
     category: 'volleyball',
     image: 'https://images.unsplash.com/photo-1612872087720-bb876e2e67d1?w=400',
     images: [
@@ -145,8 +145,8 @@ export const venues = [
       'https://images.unsplash.com/photo-1553778263-73a83bab9b0c?w=800'
     ],
     areas: [
-      { id: 1, name: '1号场地', inUse: true, capacity: 12 },
-      { id: 2, name: '2号场地', inUse: true, capacity: 12 }
+      { id: 1, name: '1号场地', inUse: true, maintenance: false, capacity: 12 },
+      { id: 2, name: '2号场地', inUse: true, maintenance: false, capacity: 12 }
     ]
   },
   {
