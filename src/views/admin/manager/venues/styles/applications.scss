@@ -1,0 +1,52 @@
+.venue-applications {
+    .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-weight: 600;
+    }
+
+    .filter-bar {
+        display: flex;
+        align-items: center;
+    }
+
+    .application-detail {
+        .detail-section {
+            margin-bottom: 24px;
+
+            &:last-child {
+                margin-bottom: 0;
+            }
+
+            .section-title {
+                font-size: 16px;
+                font-weight: 600;
+                color: #303133;
+                margin-bottom: 16px;
+                padding-bottom: 8px;
+                border-bottom: 1px solid #DCDFE6;
+            }
+
+            .detail-item {
+                margin-bottom: 12px;
+                line-height: 32px;
+
+                .label {
+                    color: #606266;
+                    font-weight: 500;
+                }
+
+                .value {
+                    color: #303133;
+                }
+            }
+
+            .description-text {
+                color: #606266;
+                line-height: 1.8;
+                margin: 0;
+            }
+        }
+    }
+}
