@@ -3,15 +3,8 @@
     <div v-if="venue" class="detail-container">
       <!-- 左侧：场地信息 -->
       <div class="venue-info-section">
-        <!-- 场地封面 -->
-        <div class="venue-cover">
-          <img :src="venue.image" :alt="venue.name" />
-          <div class="cover-overlay">
-            <div class="venue-tag" :class="venue.status">
-              {{ venue.status === 'available' ? '可申请' : '使用中' }}
-            </div>
-          </div>
-        </div>
+        <!-- 场地图片轮播 -->
+        <ImageCarousel :images="venue.images" height="400px" />
 
         <!-- 场地基本信息 -->
         <div class="info-card">
@@ -202,6 +195,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Basketball, User } from '@element-plus/icons-vue'
 import { venues } from '@/mock/venues'
+import ImageCarousel from '@/components/image-carousel/index.vue'
 
 const route = useRoute()
 const router = useRouter()
