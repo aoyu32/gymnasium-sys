@@ -110,19 +110,44 @@
               />
             </el-form-item>
 
-            <el-form-item label="使用时段" prop="timeSlot">
-              <el-select v-model="applyForm.timeSlot" placeholder="请选择使用时段" style="width: 100%">
-                <el-option label="08:00-10:00" value="08:00-10:00" />
-                <el-option label="10:00-12:00" value="10:00-12:00" />
-                <el-option label="14:00-16:00" value="14:00-16:00" />
-                <el-option label="16:00-18:00" value="16:00-18:00" />
-                <el-option label="18:00-20:00" value="18:00-20:00" />
-                <el-option label="20:00-22:00" value="20:00-22:00" />
+            <el-form-item label="使用时段" prop="timeRange">
+              <el-time-picker
+                v-model="applyForm.timeRange"
+                is-range
+                range-separator="至"
+                start-placeholder="开始时间"
+                end-placeholder="结束时间"
+                format="HH:mm"
+                value-format="HH:mm"
+                style="width: 100%"
+              />
+            </el-form-item>
+
+            <el-form-item label="关联活动" prop="activityId">
+              <el-select v-model="applyForm.activityId" placeholder="请选择关联活动" style="width: 100%" @change="handleActivityChange">
+                <el-option
+                  v-for="activity in userActivities"
+                  :key="activity.id"
+                  :label="activity.name"
+                  :value="activity.id"
+                />
               </el-select>
             </el-form-item>
 
             <el-form-item label="活动类型" prop="activityType">
-              <el-input v-model="applyForm.activityType" placeholder="请输入活动类型，如：篮球比赛" />
+              <el-select v-model="applyForm.activityType" placeholder="请选择活动类型" style="width: 100%" disabled>
+                <el-option label="篮球" value="basketball" />
+                <el-option label="羽毛球" value="badminton" />
+                <el-option label="乒乓球" value="tabletennis" />
+                <el-option label="足球" value="football" />
+                <el-option label="网球" value="tennis" />
+                <el-option label="排球" value="volleyball" />
+                <el-option label="游泳" value="swimming" />
+                <el-option label="健身" value="fitness" />
+                <el-option label="跑步" value="running" />
+                <el-option label="武术" value="martialarts" />
+                <el-option label="其他" value="other" />
+              </el-select>
             </el-form-item>
 
             <el-form-item label="参与人数" prop="participants">
@@ -201,6 +226,14 @@ const route = useRoute()
 const router = useRouter()
 const formRef = ref(null)
 
+// 模拟用户创建的活动列表
+const userActivities = ref([
+  { id: 1, name: '篮球友谊赛', type: 'basketball' },
+  { id: 2, name: '羽毛球训练', type: 'badminton' },
+  { id: 3, name: '足球比赛', type: 'football' },
+  { id: 4, name: '网球练习', type: 'tennis' }
+])
+
 // 获取场地详情
 const venue = ref(null)
 
@@ -250,7 +283,8 @@ const venueDescription = computed(() => {
 const applyForm = ref({
   areaId: '',
   date: '',
-  timeSlot: '',
+  timeRange: [],
+  activityId: '',
   activityType: '',
   participants: 1,
   name: '',
@@ -262,8 +296,9 @@ const applyForm = ref({
 const rules = {
   areaId: [{ required: true, message: '请选择场地区域', trigger: 'change' }],
   date: [{ required: true, message: '请选择使用日期', trigger: 'change' }],
-  timeSlot: [{ required: true, message: '请选择使用时段', trigger: 'change' }],
-  activityType: [{ required: true, message: '请输入活动类型', trigger: 'blur' }],
+  timeRange: [{ required: true, message: '请选择使用时段', trigger: 'change' }],
+  activityId: [{ required: true, message: '请选择关联活动', trigger: 'change' }],
+  activityType: [{ required: true, message: '请选择活动类型', trigger: 'change' }],
   participants: [{ required: true, message: '请输入参与人数', trigger: 'blur' }],
   name: [{ required: true, message: '请输入姓名', trigger: 'blur' }],
   phone: [
@@ -272,6 +307,15 @@ const rules = {
   ],
   studentId: [{ required: true, message: '请输入学号或工号', trigger: 'blur' }],
   reason: [{ required: true, message: '请填写申请理由', trigger: 'blur' }]
+}
+
+// 处理活动选择变化
+const handleActivityChange = (value) => {
+  // 选择活动时，自动填充活动类型
+  const selectedActivity = userActivities.value.find(a => a.id === value)
+  if (selectedActivity) {
+    applyForm.value.activityType = selectedActivity.type
+  }
 }
 
 // 禁用过去的日期
@@ -284,6 +328,20 @@ const handleSubmit = async () => {
   
   await formRef.value.validate((valid) => {
     if (valid) {
+      // 获取活动名称
+      const selectedActivity = userActivities.value.find(a => a.id === applyForm.value.activityId)
+      const activityName = selectedActivity ? selectedActivity.name : ''
+      
+      // 格式化时间段
+      const timeSlot = applyForm.value.timeRange ? 
+        `${applyForm.value.timeRange[0]}-${applyForm.value.timeRange[1]}` : ''
+      
+      console.log('提交申请:', {
+        ...applyForm.value,
+        activityName,
+        timeSlot
+      })
+      
       ElMessage.success('申请提交成功，请等待审核')
       // 这里后期对接API
       setTimeout(() => {
