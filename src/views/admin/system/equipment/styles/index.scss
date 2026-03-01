@@ -1,0 +1,71 @@
+.system-equipment {
+    .filter-bar {
+        display: flex;
+        gap: 16px;
+    }
+
+    .pagination-wrapper {
+        margin-top: 20px;
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    .stat-item {
+        text-align: center;
+        padding: 20px 0;
+
+        .stat-label {
+            font-size: 14px;
+            color: #8c8c8c;
+            margin-bottom: 12px;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: 600;
+        }
+    }
+
+    .equipment-detail {
+        :deep(.el-descriptions__label) {
+            width: 120px;
+        }
+    }
+
+    // 系统管理员蓝色主题
+    :deep(.el-button--primary) {
+        --el-button-bg-color: #1890ff;
+        --el-button-border-color: #1890ff;
+        --el-button-hover-bg-color: #40a9ff;
+        --el-button-hover-border-color: #40a9ff;
+        --el-button-active-bg-color: #096dd9;
+        --el-button-active-border-color: #096dd9;
+    }
+
+    :deep(.el-button.is-link) {
+        &.el-button--primary {
+            --el-button-text-color: #1890ff;
+            --el-button-hover-text-color: #40a9ff;
+            --el-button-active-text-color: #096dd9;
+        }
+    }
+
+    // 分页器蓝色主题
+    :deep(.el-pagination) {
+        .el-pager li.is-active {
+            background-color: #1890ff;
+            color: #fff;
+        }
+
+        .el-pager li:hover {
+            color: #1890ff;
+        }
+
+        .btn-next,
+        .btn-prev {
+            &:hover {
+                color: #1890ff;
+            }
+        }
+    }
+}
