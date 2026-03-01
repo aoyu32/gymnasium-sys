@@ -160,15 +160,15 @@
             </el-form-item>
 
             <el-form-item label="申请人姓名" prop="name">
-              <el-input v-model="applyForm.name" placeholder="请输入您的姓名" />
+              <el-input v-model="applyForm.name" placeholder="请输入您的姓名" clearable />
             </el-form-item>
 
             <el-form-item label="联系电话" prop="phone">
-              <el-input v-model="applyForm.phone" placeholder="请输入联系电话" />
+              <el-input v-model="applyForm.phone" placeholder="请输入联系电话" clearable />
             </el-form-item>
 
             <el-form-item label="学号/工号" prop="studentId">
-              <el-input v-model="applyForm.studentId" placeholder="请输入学号或工号" />
+              <el-input v-model="applyForm.studentId" placeholder="请输入学号或工号" clearable />
             </el-form-item>
 
             <el-form-item label="申请理由" prop="reason">
@@ -227,6 +227,7 @@ import { ElMessage } from 'element-plus'
 import { Basketball, User } from '@element-plus/icons-vue'
 import { getVenueById } from '@/api/venue'
 import { submitApplication } from '@/api/application'
+import { getCurrentStudentInfo } from '@/api/student'
 import ImageCarousel from '@/components/image-carousel/index.vue'
 
 const route = useRoute()
@@ -245,7 +246,8 @@ const userActivities = ref([
 // 获取场地详情
 const venue = ref(null)
 
-onMounted(async () => {
+// 加载场地详情
+const loadVenueDetail = async () => {
   const id = parseInt(route.params.id)
   try {
     loading.value = true
@@ -260,6 +262,26 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
+}
+
+// 加载学生信息并自动填充表单
+const loadStudentInfo = async () => {
+  try {
+    const res = await getCurrentStudentInfo()
+    const student = res.data
+    // 自动填充学生信息
+    applyForm.value.name = student.name || ''
+    applyForm.value.phone = student.phone || ''
+    applyForm.value.studentId = student.studentId || ''
+  } catch (error) {
+    console.error('加载学生信息失败:', error)
+    // 不显示错误提示，让用户手动填写
+  }
+}
+
+onMounted(async () => {
+  await loadVenueDetail()
+  await loadStudentInfo()
 })
 
 // 分类标签映射
