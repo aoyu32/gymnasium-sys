@@ -165,8 +165,22 @@ const routes = [
       {
         path: 'manager/equipment',
         name: 'ManagerEquipment',
-        component: () => import('@/views/admin/manager/equipment/index.vue'),
-        meta: { title: '器材管理' }
+        redirect: '/admin/manager/equipment/info',
+        meta: { title: '器材管理' },
+        children: [
+          {
+            path: 'info',
+            name: 'ManagerEquipmentInfo',
+            component: () => import('@/views/admin/manager/equipment/info.vue'),
+            meta: { title: '器材信息管理' }
+          },
+          {
+            path: 'borrow',
+            name: 'ManagerEquipmentBorrow',
+            component: () => import('@/views/admin/manager/equipment/borrow.vue'),
+            meta: { title: '器材借还管理' }
+          }
+        ]
       },
       // 系统管理员模块
       {

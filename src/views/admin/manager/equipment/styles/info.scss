@@ -1,0 +1,148 @@
+.equipment-info-management {
+    .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-weight: 600;
+    }
+
+    .search-bar {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 12px 0;
+    }
+
+    .image-uploader {
+        width: 100%;
+
+        :deep(.el-upload) {
+            width: 100%;
+            border: 1px dashed #d9d9d9;
+            border-radius: 6px;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s;
+
+            &:hover {
+                border-color: #f5222d;
+            }
+        }
+
+        .uploaded-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .image-uploader-icon {
+            font-size: 28px;
+            color: #8c939d;
+            width: 100%;
+            height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    }
+
+    .upload-tip {
+        font-size: 12px;
+        color: #909399;
+        margin-top: 8px;
+    }
+
+    .form-tip {
+        font-size: 12px;
+        color: #909399;
+        margin-top: 4px;
+    }
+
+    .equipment-detail {
+        .detail-section {
+            margin-bottom: 24px;
+
+            &:last-child {
+                margin-bottom: 0;
+            }
+
+            .section-title {
+                font-size: 16px;
+                font-weight: 500;
+                color: #303133;
+                margin-bottom: 16px;
+                padding-bottom: 8px;
+                border-bottom: 1px solid #e4e7ed;
+            }
+
+            .detail-item {
+                margin-bottom: 12px;
+                display: flex;
+                align-items: center;
+
+                .label {
+                    color: #606266;
+                    font-size: 14px;
+                    min-width: 100px;
+                }
+
+                .value {
+                    color: #303133;
+                    font-size: 14px;
+                    flex: 1;
+                }
+            }
+
+            .description-text {
+                color: #606266;
+                font-size: 14px;
+                line-height: 1.6;
+                margin: 0;
+                padding: 12px;
+                background-color: #f5f7fa;
+                border-radius: 4px;
+            }
+        }
+    }
+
+    // 品牌规格管理样式
+    .brand-management {
+        .brand-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            font-weight: 500;
+            font-size: 16px;
+        }
+
+        .brand-actions {
+            display: flex;
+            gap: 8px;
+        }
+    }
+
+    // 使用须知样式
+    .notice-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+
+        .notice-item {
+            display: flex;
+            align-items: flex-start;
+            padding: 8px 0;
+            color: #606266;
+            font-size: 14px;
+            line-height: 1.6;
+
+            .notice-dot {
+                color: #f5222d;
+                margin-right: 8px;
+                font-weight: bold;
+            }
+        }
+    }
+}

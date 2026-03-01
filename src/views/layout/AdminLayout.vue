@@ -178,10 +178,19 @@ const managerMenuItems = [
     icon: 'Calendar',
     children: [
       { path: '/admin/manager/activities/info', title: '活动信息管理' },
-      { path: '/admin/manager/activities/applications', title: '活动申请管理' }
+      { path: '/admin/manager/activities/applications', title: '活动申请管理' },
+      { path: '/admin/manager/activities/my-activities', title: '我的活动管理' }
     ]
   },
-  { path: '/admin/manager/equipment', title: '器材管理', icon: 'Box' }
+  { 
+    path: '/admin/manager/equipment',
+    title: '器材管理',
+    icon: 'Box',
+    children: [
+      { path: '/admin/manager/equipment/info', title: '器材信息管理' },
+      { path: '/admin/manager/equipment/borrow', title: '器材借还管理' }
+    ]
+  }
 ]
 
 // 系统管理员菜单

@@ -31,8 +31,8 @@
               <el-icon><Goods /></el-icon>
               {{ equipment.stock }}/{{ equipment.total }}件
             </el-descriptions-item>
-            <el-descriptions-item label="器材状态">
-              <el-tag type="success" effect="plain">{{ equipment.conditionText }}</el-tag>
+            <el-descriptions-item label="入库日期">
+              {{ equipment.createdAt }}
             </el-descriptions-item>
             <el-descriptions-item label="品牌规格">
               <div v-if="equipment.brands && equipment.brands.length > 0" class="brand-list">
@@ -55,23 +55,18 @@
         </div>
 
         <!-- 器材描述 -->
-        <div class="info-card">
+        <div class="info-card" v-if="equipment.description">
           <h2>器材描述</h2>
           <div class="equipment-description">
-            <p>{{ equipmentDescription }}</p>
+            <p>{{ equipment.description }}</p>
           </div>
         </div>
 
-        <!-- 借用须知 -->
-        <div class="info-card">
-          <h2>借用须知</h2>
+        <!-- 使用须知 -->
+        <div class="info-card" v-if="equipment.notice">
+          <h2>使用须知</h2>
           <ul class="notice-list">
-            <li>请爱护器材，如有损坏需照价赔偿</li>
-            <li>借用期限最长为7天，逾期将影响信用记录</li>
-            <li>归还时请检查器材完好性，如有问题及时报告</li>
-            <li>请勿将器材转借他人使用</li>
-            <li>如需延期，请提前申请</li>
-            <li>归还时请清洁器材，保持卫生</li>
+            <li v-for="(item, index) in equipment.notice.split('\n')" :key="index">{{ item }}</li>
           </ul>
         </div>
       </div>
@@ -220,17 +215,6 @@ const categoryMap = {
 
 const getCategoryLabel = computed(() => {
   return categoryMap[equipment.value?.category] || '其他'
-})
-
-// 器材描述
-const equipmentDescription = computed(() => {
-  const descriptions = {
-    ball: '本器材为专业运动用球，经过严格质量检测，适合各类训练和比赛使用。材质优良，手感舒适，耐用性强。',
-    racket: '专业运动球拍，采用优质材料制作，重量适中，手感舒适。适合不同水平的运动爱好者使用，可提升运动表现。',
-    protection: '专业运动护具，提供有效保护，减少运动伤害风险。材质透气舒适，不影响运动表现。',
-    other: '专业运动器材，质量可靠，使用方便。适合各类体育活动使用。'
-  }
-  return descriptions[equipment.value?.category] || descriptions.other
 })
 
 // 借用表单
