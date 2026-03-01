@@ -198,7 +198,7 @@ const routes = [
         path: 'system/home',
         name: 'SystemHome',
         component: () => import('@/views/admin/system/home/index.vue'),
-        meta: { title: '工作台' }
+        meta: { title: '数据看板' }
       },
       {
         path: 'system/students',

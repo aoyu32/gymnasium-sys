@@ -9,10 +9,10 @@
               <Basketball />
             </el-icon>
             <div v-else class="system-title">
-              <el-icon :size="18" color="#f5222d">
+              <el-icon :size="18" :color="themeColor">
                 <Basketball />
               </el-icon>
-              <span class="role-name">{{ roleName }}</span><span class="suffix">后台</span>
+              <span class="role-name" :style="{ color: themeColor }">{{ roleName }}</span><span class="suffix">后台</span>
             </div>
           </div>
         </div>
@@ -22,6 +22,7 @@
           :collapse="isCollapse"
           :unique-opened="true"
           router
+          :class="{ 'system-menu': isSystemAdmin }"
         >
           <template v-for="item in menuItems" :key="item.path">
             <!-- 有子菜单的项 -->
@@ -51,7 +52,7 @@
         <!-- 顶部栏 -->
         <el-header class="layout-header">
           <div class="header-left">
-            <el-icon class="collapse-icon" @click="toggleCollapse">
+            <el-icon class="collapse-icon" :class="{ 'system-icon': isSystemAdmin }" @click="toggleCollapse">
               <Fold v-if="!isCollapse" />
               <Expand v-else />
             </el-icon>
@@ -63,7 +64,7 @@
           
           <div class="header-right">
             <el-dropdown @command="handleCommand">
-              <div class="user-info">
+              <div class="user-info" :class="{ 'system-user': isSystemAdmin }">
                 <el-avatar :size="36">
                   <el-icon><User /></el-icon>
                 </el-avatar>
@@ -107,6 +108,7 @@
         <el-form-item label="头像">
           <el-upload
             class="avatar-uploader"
+            :class="{ 'system-uploader': isSystemAdmin }"
             :show-file-list="false"
             :before-upload="beforeAvatarUpload"
             :http-request="handleAvatarUpload"
@@ -192,7 +194,7 @@ const userInfo = computed(() => userStore.userInfo)
 const activeMenu = computed(() => route.path)
 const currentRoute = computed(() => route.meta?.title || '')
 
-// 根据路由判断当前角色
+// 根据角色判断当前角色
 const userRole = computed(() => {
   if (route.path.startsWith('/admin/manager')) {
     return 'manager'
@@ -200,6 +202,14 @@ const userRole = computed(() => {
     return 'system'
   }
   return 'manager'
+})
+
+// 是否是系统管理员
+const isSystemAdmin = computed(() => userRole.value === 'system')
+
+// 主题色
+const themeColor = computed(() => {
+  return isSystemAdmin.value ? '#1890ff' : '#f5222d'
 })
 
 // 角色文本
@@ -263,7 +273,7 @@ const managerMenuItems = [
 
 // 系统管理员菜单
 const systemMenuItems = [
-  { path: '/admin/system/home', title: '工作台', icon: 'HomeFilled' },
+  { path: '/admin/system/home', title: '数据看板', icon: 'HomeFilled' },
   { path: '/admin/system/students', title: '学生管理', icon: 'User' },
   { path: '/admin/system/managers', title: '负责人管理', icon: 'UserFilled' },
   { path: '/admin/system/equipment', title: '器材管理', icon: 'Box' },

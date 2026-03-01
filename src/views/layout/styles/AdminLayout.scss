@@ -60,6 +60,30 @@
           background: #f5222d;
         }
       }
+
+      // 系统管理员菜单样式
+      &.system-menu {
+        .el-menu-item {
+          &:hover {
+            color: #1890ff;
+            background: #e6f7ff;
+          }
+
+          &.is-active {
+            color: #fff;
+            background: #1890ff;
+          }
+        }
+
+        .el-sub-menu {
+          .el-sub-menu__title {
+            &:hover {
+              color: #1890ff;
+              background: #e6f7ff;
+            }
+          }
+        }
+      }
     }
   }
 
@@ -84,6 +108,10 @@
         &:hover {
           color: #f5222d;
         }
+
+        &.system-icon:hover {
+          color: #1890ff;
+        }
       }
     }
 
@@ -102,6 +130,10 @@
 
         &:hover {
           background: #fff1f0;
+        }
+
+        &.system-user:hover {
+          background: #e6f7ff;
         }
 
         .username {
@@ -146,6 +178,11 @@
     &:hover {
       border-color: #f5222d;
     }
+  }
+
+  // 系统管理员上传样式
+  &.system-uploader :deep(.el-upload:hover) {
+    border-color: #1890ff;
   }
 
   .avatar-uploader-icon {
