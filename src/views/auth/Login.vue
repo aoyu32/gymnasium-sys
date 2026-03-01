@@ -100,8 +100,8 @@ const handleLogin = async () => {
         // 根据角色跳转
         const roleRoutes = {
           student: '/student/home',
-          manager: '/manager/home',
-          admin: '/admin/home'
+          manager: '/admin/manager/home',
+          admin: '/admin/system/home'
         }
         router.push(roleRoutes[loginForm.value.role])
       } catch (error) {

@@ -109,6 +109,11 @@ const routes = [
     component: () => import('@/views/layout/AdminLayout.vue'),
     redirect: '/admin/manager/home',
     children: [
+      // 通用home路由，重定向到manager/home（默认）
+      {
+        path: 'home',
+        redirect: '/admin/manager/home'
+      },
       // 场地负责人模块
       {
         path: 'manager/home',
