@@ -1,0 +1,187 @@
+.system-students {
+    .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .filter-bar {
+        display: flex;
+        gap: 16px;
+    }
+
+    .pagination-wrapper {
+        margin-top: 20px;
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    // 系统管理员蓝色主题
+    :deep(.el-button--primary) {
+        --el-button-bg-color: #1890ff;
+        --el-button-border-color: #1890ff;
+        --el-button-hover-bg-color: #40a9ff;
+        --el-button-hover-border-color: #40a9ff;
+        --el-button-active-bg-color: #096dd9;
+        --el-button-active-border-color: #096dd9;
+    }
+
+    :deep(.el-button.is-link) {
+        &.el-button--primary {
+            --el-button-text-color: #1890ff;
+            --el-button-hover-text-color: #40a9ff;
+            --el-button-active-text-color: #096dd9;
+        }
+    }
+
+    :deep(.el-tag--success) {
+        --el-tag-bg-color: #f6ffed;
+        --el-tag-border-color: #b7eb8f;
+        --el-tag-text-color: #52c41a;
+    }
+
+    // Radio 单选框蓝色主题
+    :deep(.el-radio) {
+        .el-radio__input.is-checked {
+            .el-radio__inner {
+                background-color: #1890ff;
+                border-color: #1890ff;
+            }
+        }
+
+        .el-radio__input.is-checked+.el-radio__label {
+            color: #1890ff;
+        }
+    }
+
+    // Checkbox 复选框蓝色主题
+    :deep(.el-checkbox) {
+        .el-checkbox__input.is-checked {
+            .el-checkbox__inner {
+                background-color: #1890ff;
+                border-color: #1890ff;
+            }
+        }
+
+        .el-checkbox__input.is-checked+.el-checkbox__label {
+            color: #1890ff;
+        }
+    }
+
+    // Input 输入框聚焦蓝色主题
+    :deep(.el-input__wrapper) {
+        &.is-focus {
+            box-shadow: 0 0 0 1px #1890ff inset;
+        }
+    }
+
+    // Select 下拉框蓝色主题
+    :deep(.el-select) {
+        .el-input.is-focus .el-input__wrapper {
+            box-shadow: 0 0 0 1px #1890ff inset;
+        }
+    }
+
+    // DatePicker 日期选择器蓝色主题
+    :deep(.el-date-editor) {
+        &.is-active .el-input__wrapper {
+            box-shadow: 0 0 0 1px #1890ff inset;
+        }
+    }
+
+    // 分页器蓝色主题
+    :deep(.el-pagination) {
+        .el-pager li.is-active {
+            background-color: #1890ff;
+            color: #fff;
+        }
+
+        .el-pager li:hover {
+            color: #1890ff;
+        }
+
+        .btn-next,
+        .btn-prev {
+            &:hover {
+                color: #1890ff;
+            }
+        }
+
+        .el-pagination__jump {
+            .el-input__inner:focus {
+                border-color: #1890ff;
+            }
+        }
+    }
+
+    // 学生详情样式
+    .student-detail {
+        .detail-header {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            margin-bottom: 24px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid #f0f0f0;
+
+            .detail-avatar {
+                background: #e6f7ff;
+                color: #1890ff;
+            }
+
+            .detail-info {
+                flex: 1;
+
+                h2 {
+                    margin: 0 0 8px 0;
+                    font-size: 24px;
+                    color: #262626;
+                }
+
+                .student-id {
+                    margin: 0;
+                    font-size: 16px;
+                    color: #8c8c8c;
+                }
+            }
+        }
+
+        .detail-descriptions {
+            :deep(.el-descriptions__label) {
+                width: 100px;
+                background: #fafafa;
+            }
+        }
+    }
+}
+
+// 全局弹窗内的蓝色主题（针对系统管理员页面的弹窗）
+.system-students {
+    :deep(.el-dialog) {
+        .el-radio {
+            .el-radio__input.is-checked {
+                .el-radio__inner {
+                    background-color: #1890ff;
+                    border-color: #1890ff;
+                }
+            }
+
+            .el-radio__input.is-checked+.el-radio__label {
+                color: #1890ff;
+            }
+        }
+
+        .el-checkbox {
+            .el-checkbox__input.is-checked {
+                .el-checkbox__inner {
+                    background-color: #1890ff;
+                    border-color: #1890ff;
+                }
+            }
+
+            .el-checkbox__input.is-checked+.el-checkbox__label {
+                color: #1890ff;
+            }
+        }
+    }
+}
