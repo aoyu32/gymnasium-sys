@@ -139,8 +139,22 @@ const routes = [
       {
         path: 'manager/activities',
         name: 'ManagerActivities',
-        component: () => import('@/views/admin/manager/activities/index.vue'),
-        meta: { title: '活动管理' }
+        redirect: '/admin/manager/activities/info',
+        meta: { title: '活动管理' },
+        children: [
+          {
+            path: 'info',
+            name: 'ManagerActivitiesInfo',
+            component: () => import('@/views/admin/manager/activities/info.vue'),
+            meta: { title: '活动信息管理' }
+          },
+          {
+            path: 'applications',
+            name: 'ManagerActivitiesApplications',
+            component: () => import('@/views/admin/manager/activities/applications.vue'),
+            meta: { title: '活动申请管理' }
+          }
+        ]
       },
       {
         path: 'manager/equipment',

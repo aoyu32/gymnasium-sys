@@ -172,7 +172,15 @@ const managerMenuItems = [
       { path: '/admin/manager/venues/applications', title: '场地申请管理' }
     ]
   },
-  { path: '/admin/manager/activities', title: '活动管理', icon: 'Calendar' },
+  { 
+    path: '/admin/manager/activities',
+    title: '活动管理',
+    icon: 'Calendar',
+    children: [
+      { path: '/admin/manager/activities/info', title: '活动信息管理' },
+      { path: '/admin/manager/activities/applications', title: '活动申请管理' }
+    ]
+  },
   { path: '/admin/manager/equipment', title: '器材管理', icon: 'Box' }
 ]
 

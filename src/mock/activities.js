@@ -5,13 +5,15 @@ export const activities = [
     id: 1,
     title: '周末篮球友谊赛',
     time: '2026-02-01 14:00',
-    venue: '篮球馆A场',
+    venue: '篮球馆',
+    area: 'A场',
     participants: 8,
     maxParticipants: 10,
     status: 'hot',
     statusText: '火热',
     category: 'basketball',
     activityType: 'public',
+    creator: '刘老师',
     image: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=400'
   },
   {
@@ -19,12 +21,14 @@ export const activities = [
     title: '羽毛球训练营',
     time: '2026-02-03 09:00',
     venue: '羽毛球馆',
+    area: '1号场地',
     participants: 15,
     maxParticipants: 20,
     status: 'new',
     statusText: '最新',
     category: 'badminton',
     activityType: 'public',
+    creator: '刘老师',
     image: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=400'
   },
   // 已满员的活动
@@ -33,12 +37,14 @@ export const activities = [
     title: '乒乓球比赛',
     time: '2026-02-05 15:00',
     venue: '乒乓球室',
+    area: '全场',
     participants: 16,
     maxParticipants: 16,
     status: 'hot',
     statusText: '火热',
     category: 'tabletennis',
     activityType: 'public',
+    creator: '刘老师',
     image: 'https://images.unsplash.com/photo-1609710228159-0fa9bd7c0827?w=400'
   },
   {
@@ -46,12 +52,14 @@ export const activities = [
     title: '足球友谊赛',
     time: '2026-02-06 16:00',
     venue: '足球场',
+    area: '全场',
     participants: 22,
     maxParticipants: 22,
     status: 'new',
     statusText: '最新',
     category: 'football',
     activityType: 'public',
+    creator: '刘老师',
     image: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=400'
   },
   {
@@ -59,12 +67,14 @@ export const activities = [
     title: '网球双打赛',
     time: '2026-02-08 10:00',
     venue: '网球场',
+    area: '1号场地',
     participants: 8,
     maxParticipants: 8,
     status: 'hot',
     statusText: '火热',
     category: 'tennis',
     activityType: 'private',
+    creator: '张三',
     image: 'https://images.unsplash.com/photo-1622279457486-62dcc4a431d6?w=400'
   },
   // 已结束的活动
@@ -73,12 +83,14 @@ export const activities = [
     title: '游泳训练课',
     time: '2026-01-20 14:00',
     venue: '游泳馆',
+    area: '深水区',
     participants: 10,
     maxParticipants: 15,
     status: 'new',
     statusText: '最新',
     category: 'swimming',
     activityType: 'public',
+    creator: '刘老师',
     image: 'https://images.unsplash.com/photo-1519315901367-f34ff9154487?w=400'
   },
   {
@@ -86,12 +98,14 @@ export const activities = [
     title: '瑜伽健身课',
     time: '2026-01-15 18:00',
     venue: '健身房',
+    area: '瑜伽室',
     participants: 12,
     maxParticipants: 12,
     status: 'new',
     statusText: '最新',
     category: 'fitness',
     activityType: 'public',
+    creator: '刘老师',
     image: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400'
   },
   // 报名中的活动
@@ -100,12 +114,14 @@ export const activities = [
     title: '排球联赛',
     time: '2026-02-14 15:00',
     venue: '排球馆',
+    area: '主场',
     participants: 10,
     maxParticipants: 12,
     status: 'hot',
     statusText: '火热',
     category: 'volleyball',
     activityType: 'public',
+    creator: '刘老师',
     image: 'https://images.unsplash.com/photo-1612872087720-bb876e2e67d1?w=400'
   },
   {
@@ -113,12 +129,14 @@ export const activities = [
     title: '跆拳道体验课',
     time: '2026-02-15 16:00',
     venue: '武术馆',
+    area: '训练室',
     participants: 5,
     maxParticipants: 10,
     status: 'new',
     statusText: '最新',
     category: 'martialarts',
     activityType: 'public',
+    creator: '刘老师',
     image: 'https://images.unsplash.com/photo-1555597673-b21d5c935865?w=400'
   },
   {
@@ -126,12 +144,14 @@ export const activities = [
     title: '晨跑活动',
     time: '2026-02-16 06:30',
     venue: '田径场',
+    area: '跑道',
     participants: 20,
     maxParticipants: 30,
     status: 'hot',
     statusText: '火热',
     category: 'running',
     activityType: 'public',
+    creator: '刘老师',
     image: 'https://images.unsplash.com/photo-1552674605-db6ffd4facb5?w=400'
   },
   // 已结束的活动
@@ -140,12 +160,14 @@ export const activities = [
     title: '台球比赛',
     time: '2026-01-18 19:00',
     venue: '台球室',
+    area: '全场',
     participants: 8,
     maxParticipants: 8,
     status: 'new',
     statusText: '最新',
     category: 'other',
     activityType: 'private',
+    creator: '李四',
     image: 'https://images.unsplash.com/photo-1604147706283-d7119b5b822c?w=400'
   },
   {
@@ -153,12 +175,14 @@ export const activities = [
     title: '攀岩体验',
     time: '2026-01-10 14:00',
     venue: '攀岩馆',
+    area: '初级区',
     participants: 6,
     maxParticipants: 10,
     status: 'new',
     statusText: '最新',
     category: 'other',
     activityType: 'public',
+    creator: '刘老师',
     image: 'https://images.unsplash.com/photo-1522163182402-834f871fd851?w=400'
   },
   // 报名中的活动
@@ -166,13 +190,15 @@ export const activities = [
     id: 13,
     title: '篮球技巧训练',
     time: '2026-02-22 10:00',
-    venue: '篮球馆B场',
+    venue: '篮球馆',
+    area: 'B场',
     participants: 12,
     maxParticipants: 15,
     status: 'hot',
     statusText: '火热',
     category: 'basketball',
     activityType: 'public',
+    creator: '刘老师',
     image: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=400'
   },
   {
@@ -180,12 +206,14 @@ export const activities = [
     title: '羽毛球单打赛',
     time: '2026-02-23 14:00',
     venue: '羽毛球馆',
+    area: '2号场地',
     participants: 8,
     maxParticipants: 16,
     status: 'new',
     statusText: '最新',
     category: 'badminton',
     activityType: 'public',
+    creator: '刘老师',
     image: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=400'
   },
   // 已满员的活动
@@ -194,12 +222,14 @@ export const activities = [
     title: '足球训练营',
     time: '2026-02-24 16:00',
     venue: '足球场',
+    area: '全场',
     participants: 25,
     maxParticipants: 25,
     status: 'hot',
     statusText: '火热',
     category: 'football',
     activityType: 'public',
+    creator: '刘老师',
     image: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=400'
   },
   {
@@ -207,12 +237,14 @@ export const activities = [
     title: '乒乓球双打赛',
     time: '2026-02-25 15:00',
     venue: '乒乓球室',
+    area: '全场',
     participants: 12,
     maxParticipants: 12,
     status: 'new',
     statusText: '最新',
     category: 'tabletennis',
     activityType: 'private',
+    creator: '王五',
     image: 'https://images.unsplash.com/photo-1609710228159-0fa9bd7c0827?w=400'
   },
   // 报名中的活动
@@ -221,12 +253,14 @@ export const activities = [
     title: '网球初级课程',
     time: '2026-02-26 09:00',
     venue: '网球场',
+    area: '2号场地',
     participants: 5,
     maxParticipants: 10,
     status: 'new',
     statusText: '最新',
     category: 'tennis',
     activityType: 'public',
+    creator: '刘老师',
     image: 'https://images.unsplash.com/photo-1622279457486-62dcc4a431d6?w=400'
   },
   {
@@ -234,12 +268,14 @@ export const activities = [
     title: '游泳比赛',
     time: '2026-02-27 14:00',
     venue: '游泳馆',
+    area: '标准池',
     participants: 15,
     maxParticipants: 20,
     status: 'hot',
     statusText: '火热',
     category: 'swimming',
     activityType: 'public',
+    creator: '刘老师',
     image: 'https://images.unsplash.com/photo-1519315901367-f34ff9154487?w=400'
   },
   // 已结束的活动
@@ -248,12 +284,14 @@ export const activities = [
     title: '力量训练课',
     time: '2026-01-12 18:00',
     venue: '健身房',
+    area: '器械区',
     participants: 10,
     maxParticipants: 15,
     status: 'new',
     statusText: '最新',
     category: 'fitness',
     activityType: 'public',
+    creator: '刘老师',
     image: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400'
   },
   // 已满员的活动
@@ -262,12 +300,14 @@ export const activities = [
     title: '排球训练营',
     time: '2026-03-01 10:00',
     venue: '排球馆',
+    area: '副场',
     participants: 18,
     maxParticipants: 18,
     status: 'hot',
     statusText: '火热',
     category: 'volleyball',
     activityType: 'public',
+    creator: '刘老师',
     image: 'https://images.unsplash.com/photo-1612872087720-bb876e2e67d1?w=400'
   }
 ]
