@@ -1,0 +1,88 @@
+.system-forum-posts {
+    .filter-bar {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+    }
+
+    .pagination-wrapper {
+        margin-top: 20px;
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    .post-detail {
+        .summary-content {
+            line-height: 1.6;
+            color: #666;
+        }
+
+        .content-preview {
+            max-height: 300px;
+            overflow-y: auto;
+            line-height: 1.8;
+            color: #333;
+            white-space: pre-wrap;
+            word-break: break-word;
+            padding: 12px;
+            background: #f5f5f5;
+            border-radius: 4px;
+        }
+
+        .images-preview {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+    }
+
+    // 蓝色主题样式 - 按钮
+    :deep(.el-button--primary) {
+        --el-button-bg-color: #1890ff;
+        --el-button-border-color: #1890ff;
+        --el-button-hover-bg-color: #40a9ff;
+        --el-button-hover-border-color: #40a9ff;
+        --el-button-active-bg-color: #096dd9;
+        --el-button-active-border-color: #096dd9;
+    }
+
+    // link 按钮蓝色主题
+    :deep(.el-button--primary.is-link) {
+        --el-button-text-color: #1890ff;
+        --el-button-hover-text-color: #40a9ff;
+        --el-button-active-text-color: #096dd9;
+    }
+
+    // 分页器蓝色主题
+    :deep(.el-pagination) {
+        .el-pager li.is-active {
+            background-color: #1890ff;
+            color: #fff;
+        }
+
+        .el-pager li:hover:not(.is-active) {
+            color: #1890ff;
+        }
+
+        button:hover {
+            color: #1890ff;
+        }
+    }
+
+    // 蓝色主题样式 - 表单元素
+    :deep(.el-input__wrapper.is-focus) {
+        box-shadow: 0 0 0 1px #1890ff inset;
+    }
+
+    :deep(.el-select .el-input.is-focus .el-input__wrapper) {
+        box-shadow: 0 0 0 1px #1890ff inset;
+    }
+
+    :deep(.el-pagination.is-background .el-pager li:not(.is-disabled).is-active) {
+        background-color: #1890ff;
+    }
+
+    :deep(.el-pagination.is-background .el-pager li:not(.is-disabled):hover) {
+        color: #1890ff;
+    }
+}
