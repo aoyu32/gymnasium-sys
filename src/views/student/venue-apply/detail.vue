@@ -11,7 +11,7 @@
           <div class="card-header">
             <h1>{{ venue.name }}</h1>
             <el-tag :type="venue.status === 'available' ? 'success' : 'warning'" size="large">
-              {{ venue.status === 'available' ? '可申请' : '使用中' }}
+              {{ venue.status === 'available' ? '正常使用' : '维护中' }}
             </el-tag>
           </div>
 
@@ -31,13 +31,13 @@
                     <span class="area-name">{{ area.name }}</span>
                     <span class="area-capacity">容纳{{ area.capacity }}人</span>
                   </div>
-                  <el-tag :type="area.inUse ? 'danger' : 'success'" size="small" effect="plain">
-                    {{ area.inUse ? '使用中' : '可申请' }}
+                  <el-tag :type="getAreaStatusType(area)" size="small" effect="plain">
+                    {{ getAreaStatusText(area) }}
                   </el-tag>
                 </div>
               </div>
               <el-tag v-else :type="venue.status === 'available' ? 'success' : 'warning'" effect="plain">
-                {{ venue.status === 'available' ? '可申请' : '使用中' }}
+                {{ venue.status === 'available' ? '正常使用' : '维护中' }}
               </el-tag>
             </el-descriptions-item>
           </el-descriptions>
@@ -82,18 +82,18 @@
                 <el-option
                   v-for="area in venue.areas"
                   :key="area.id"
-                  :label="`${area.name} (容纳${area.capacity}人) ${area.inUse ? '- 使用中' : ''}`"
+                  :label="`${area.name} (容纳${area.capacity}人) ${getAreaStatusText(area) !== '正常使用' ? '- ' + getAreaStatusText(area) : ''}`"
                   :value="area.id"
-                  :disabled="area.inUse"
+                  :disabled="area.inUse || area.maintenance"
                 >
                   <div style="display: flex; justify-content: space-between; align-items: center;">
                     <span>{{ area.name }} (容纳{{ area.capacity }}人)</span>
                     <el-tag
-                      :type="area.inUse ? 'danger' : 'success'"
+                      :type="getAreaStatusType(area)"
                       size="small"
                       style="margin-left: 10px"
                     >
-                      {{ area.inUse ? '使用中' : '可申请' }}
+                      {{ getAreaStatusText(area) }}
                     </el-tag>
                   </div>
                 </el-option>
@@ -411,6 +411,28 @@ const handleSubmit = async () => {
 
 const goBack = () => {
   router.push('/student/venue-apply')
+}
+
+// 获取区域状态类型（用于tag颜色）
+const getAreaStatusType = (area) => {
+  if (area.maintenance) {
+    return 'warning' // 维护中 - 橙色
+  } else if (area.inUse) {
+    return 'danger' // 使用中 - 红色
+  } else {
+    return 'success' // 正常使用 - 绿色
+  }
+}
+
+// 获取区域状态文本
+const getAreaStatusText = (area) => {
+  if (area.maintenance) {
+    return '维护中'
+  } else if (area.inUse) {
+    return '使用中'
+  } else {
+    return '正常使用'
+  }
 }
 </script>
 
