@@ -83,6 +83,9 @@
             <el-form-item label="联系电话" prop="phone">
               <el-input v-model="applyForm.phone" placeholder="请输入联系电话" />
             </el-form-item>
+            <el-form-item label="联系邮箱" prop="email">
+              <el-input v-model="applyForm.email" placeholder="请输入联系邮箱" />
+            </el-form-item>
             <el-form-item label="学号/工号" prop="studentId">
               <el-input v-model="applyForm.studentId" placeholder="请输入学号或工号" />
             </el-form-item>
@@ -254,6 +257,7 @@ const getButtonText = computed(() => {
 const applyForm = ref({
   name: '',
   phone: '',
+  email: '',
   studentId: '',
   college: '',
   reason: ''
@@ -264,6 +268,10 @@ const rules = {
   phone: [
     { required: true, message: '请输入联系电话', trigger: 'blur' },
     { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号码', trigger: 'blur' }
+  ],
+  email: [
+    { required: true, message: '请输入联系邮箱', trigger: 'blur' },
+    { type: 'email', message: '请输入正确的邮箱地址', trigger: 'blur' }
   ],
   studentId: [{ required: true, message: '请输入学号或工号', trigger: 'blur' }],
   college: [{ required: true, message: '请选择所属学院', trigger: 'change' }],
