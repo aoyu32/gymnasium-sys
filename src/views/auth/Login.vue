@@ -8,10 +8,17 @@
       </div>
 
       <el-form ref="formRef" :model="loginForm" :rules="rules" size="large">
+        <el-form-item prop="role">
+          <el-select v-model="loginForm.role" placeholder="选择登录角色" style="width: 100%">
+            <el-option label="学生" value="student" />
+            <el-option label="场地负责人" value="manager" />
+            <el-option label="系统管理员" value="admin" />
+          </el-select>
+        </el-form-item>
         <el-form-item prop="username">
           <el-input
             v-model="loginForm.username"
-            placeholder="请输入用户名/学号"
+            :placeholder="usernamePlaceholder"
             :prefix-icon="User"
           />
         </el-form-item>
@@ -24,13 +31,6 @@
             show-password
             @keyup.enter="handleLogin"
           />
-        </el-form-item>
-        <el-form-item prop="role">
-          <el-select v-model="loginForm.role" placeholder="选择登录角色" style="width: 100%">
-            <el-option label="学生" value="student" />
-            <el-option label="场地负责人" value="manager" />
-            <el-option label="系统管理员" value="admin" />
-          </el-select>
         </el-form-item>
         <el-form-item>
           <div class="login-options">
@@ -55,7 +55,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { User, Lock, Basketball } from '@element-plus/icons-vue'
@@ -73,8 +73,18 @@ const loginForm = ref({
   remember: false
 })
 
+// 根据角色动态显示提示文本
+const usernamePlaceholder = computed(() => {
+  const placeholders = {
+    student: '请输入学号/邮箱',
+    manager: '请输入工号/邮箱',
+    admin: '请输入用户名/邮箱'
+  }
+  return placeholders[loginForm.value.role] || '请输入账号'
+})
+
 const rules = {
-  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
+  username: [{ required: true, message: '请输入账号', trigger: 'blur' }],
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
   role: [{ required: true, message: '请选择登录角色', trigger: 'change' }]
 }

@@ -4,15 +4,15 @@
       <div class="forget-header">
         <el-icon :size="48" color="#f5222d"><Basketball /></el-icon>
         <h2>找回密码</h2>
-        <p>通过手机号或邮箱找回密码</p>
+        <p>通过邮箱找回密码</p>
       </div>
 
       <el-form ref="formRef" :model="forgetForm" :rules="rules" size="large">
-        <el-form-item prop="account">
+        <el-form-item prop="email">
           <el-input
-            v-model="forgetForm.account"
-            placeholder="请输入手机号或邮箱"
-            :prefix-icon="User"
+            v-model="forgetForm.email"
+            placeholder="请输入邮箱"
+            :prefix-icon="Message"
           />
         </el-form-item>
         <el-form-item prop="code">
@@ -64,7 +64,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { User, Lock, Key, Basketball } from '@element-plus/icons-vue'
+import { Message, Lock, Key, Basketball } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const formRef = ref(null)
@@ -72,7 +72,7 @@ const loading = ref(false)
 const countdown = ref(0)
 
 const forgetForm = ref({
-  account: '',
+  email: '',
   code: '',
   newPassword: '',
   confirmPassword: ''
@@ -89,7 +89,10 @@ const validatePass = (rule, value, callback) => {
 }
 
 const rules = {
-  account: [{ required: true, message: '请输入手机号或邮箱', trigger: 'blur' }],
+  email: [
+    { required: true, message: '请输入邮箱', trigger: 'blur' },
+    { type: 'email', message: '邮箱格式不正确', trigger: 'blur' }
+  ],
   code: [{ required: true, message: '请输入验证码', trigger: 'blur' }],
   newPassword: [
     { required: true, message: '请输入新密码', trigger: 'blur' },
@@ -99,8 +102,15 @@ const rules = {
 }
 
 const sendCode = async () => {
-  if (!forgetForm.value.account) {
-    ElMessage.warning('请先输入手机号或邮箱')
+  if (!forgetForm.value.email) {
+    ElMessage.warning('请先输入邮箱')
+    return
+  }
+
+  // 验证邮箱格式
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(forgetForm.value.email)) {
+    ElMessage.warning('邮箱格式不正确')
     return
   }
   
@@ -112,7 +122,7 @@ const sendCode = async () => {
     }
   }, 1000)
   
-  ElMessage.success('验证码已发送')
+  ElMessage.success('验证码已发送到邮箱')
 }
 
 const handleReset = async () => {
