@@ -399,7 +399,7 @@ const handleApprove = (row) => {
       await loadApplications()
     } catch (error) {
       console.error('审批失败:', error)
-      ElMessage.error(error.message || '审批失败')
+      // 错误提示已由全局拦截器显示，这里不再重复显示
     } finally {
       loading.value = false
     }
@@ -427,7 +427,7 @@ const confirmReject = async () => {
         await loadApplications()
       } catch (error) {
         console.error('审批失败:', error)
-        ElMessage.error(error.message || '审批失败')
+        // 错误提示已由全局拦截器显示，这里不再重复显示
       } finally {
         loading.value = false
       }
@@ -462,7 +462,7 @@ const handleDelete = (row) => {
       await loadApplications()
     } catch (error) {
       console.error('删除失败:', error)
-      ElMessage.error(error.message || '删除失败')
+      // 错误提示已由全局拦截器显示，这里不再重复显示
     } finally {
       loading.value = false
     }
