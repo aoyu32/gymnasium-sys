@@ -73,18 +73,28 @@
               </div>
               <template #dropdown>
                 <el-dropdown-menu>
-                  <el-dropdown-item command="profile">
-                    <el-icon><User /></el-icon>
-                    个人信息
-                  </el-dropdown-item>
-                  <el-dropdown-item command="security">
-                    <el-icon><Lock /></el-icon>
-                    账号安全
-                  </el-dropdown-item>
-                  <el-dropdown-item divided command="logout">
-                    <el-icon><SwitchButton /></el-icon>
-                    退出登录
-                  </el-dropdown-item>
+                  <!-- 场地负责人显示完整菜单 -->
+                  <template v-if="!isSystemAdmin">
+                    <el-dropdown-item command="profile">
+                      <el-icon><User /></el-icon>
+                      个人信息
+                    </el-dropdown-item>
+                    <el-dropdown-item command="security">
+                      <el-icon><Lock /></el-icon>
+                      账号安全
+                    </el-dropdown-item>
+                    <el-dropdown-item divided command="logout">
+                      <el-icon><SwitchButton /></el-icon>
+                      退出登录
+                    </el-dropdown-item>
+                  </template>
+                  <!-- 系统管理员只显示退出登录 -->
+                  <template v-else>
+                    <el-dropdown-item command="logout">
+                      <el-icon><SwitchButton /></el-icon>
+                      退出登录
+                    </el-dropdown-item>
+                  </template>
                 </el-dropdown-menu>
               </template>
             </el-dropdown>
