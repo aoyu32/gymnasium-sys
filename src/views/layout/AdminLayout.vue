@@ -5,7 +5,7 @@
       <el-aside :width="isCollapse ? '64px' : '200px'" class="layout-aside">
         <div class="aside-header">
           <div class="header-content">
-            <el-icon v-if="isCollapse" :size="24" color="#f5222d">
+            <el-icon v-if="isCollapse" :size="24" :color="themeColor">
               <Basketball />
             </el-icon>
             <div v-else class="system-title">
