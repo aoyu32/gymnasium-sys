@@ -153,6 +153,12 @@ const routes = [
             name: 'ManagerActivitiesApplications',
             component: () => import('@/views/admin/manager/activities/applications.vue'),
             meta: { title: '活动申请管理' }
+          },
+          {
+            path: 'my-activities',
+            name: 'ManagerMyActivities',
+            component: () => import('@/views/admin/manager/activities/my-activities.vue'),
+            meta: { title: '我的活动管理' }
           }
         ]
       },
