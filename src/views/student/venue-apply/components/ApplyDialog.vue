@@ -175,14 +175,43 @@ const handleSubmit = async () => {
       const selectedActivity = userActivities.value.find(a => a.id === form.value.activityId)
       const activityName = selectedActivity ? selectedActivity.name : ''
       
-      emit('submit', { 
-        ...form.value, 
-        venueName: props.venue.name,
-        activityName
-      })
-      ElMessage.success('申请提交成功，等待审批')
-      emit('update:visible', false)
+      // 格式化时间段
+      const timeSlot = form.value.timeRange && form.value.timeRange.length === 2 ? 
+        `${formatTime(form.value.timeRange[0])}-${formatTime(form.value.timeRange[1])}` : ''
+      
+      // 构建提交数据，匹配后端API格式
+      const submitData = {
+        venueId: props.venue.id,
+        areaId: null, // 如果场地有区域，需要添加区域选择
+        activityName: activityName,
+        activityType: form.value.activityType,
+        applyDate: formatDate(form.value.date),
+        timeSlot: timeSlot,
+        participants: form.value.participants,
+        description: form.value.reason
+      }
+      
+      emit('submit', submitData)
     }
   })
+}
+
+// 格式化日期为 YYYY-MM-DD
+const formatDate = (date) => {
+  if (!date) return ''
+  const d = new Date(date)
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+// 格式化时间为 HH:mm
+const formatTime = (time) => {
+  if (!time) return ''
+  const d = new Date(time)
+  const hours = String(d.getHours()).padStart(2, '0')
+  const minutes = String(d.getMinutes()).padStart(2, '0')
+  return `${hours}:${minutes}`
 }
 </script>

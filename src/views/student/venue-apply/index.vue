@@ -94,13 +94,14 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import VenueFilter from './components/VenueFilter.vue'
 import VenueList from './components/VenueList.vue'
 import ApplyDialog from './components/ApplyDialog.vue'
-import { venues } from '@/mock/venues'
+import { getVenuePage } from '@/api/venue'
+import { getMyApplications, submitApplication, cancelApplication, deleteApplication } from '@/api/application'
 
 const router = useRouter()
 const activeTab = ref('apply')
@@ -108,6 +109,9 @@ const applyDialogVisible = ref(false)
 const detailDialogVisible = ref(false)
 const currentVenue = ref({})
 const currentApplication = ref(null)
+const loading = ref(false)
+const venues = ref([])
+const applications = ref([])
 
 const filters = ref({
   searchKeyword: '',
@@ -115,84 +119,90 @@ const filters = ref({
   status: ''
 })
 
-// 筛选后的场地列表
-const filteredVenues = computed(() => {
-  let result = [...venues]
-  
-  // 搜索筛选
-  if (filters.value.searchKeyword) {
-    result = result.filter(item => 
-      item.name.toLowerCase().includes(filters.value.searchKeyword.toLowerCase())
-    )
+// 加载场地列表
+const loadVenues = async () => {
+  try {
+    loading.value = true
+    const params = {
+      pageNum: 1,
+      pageSize: 100,
+      name: filters.value.searchKeyword || undefined,
+      category: filters.value.category || undefined,
+      status: filters.value.status || undefined
+    }
+    const res = await getVenuePage(params)
+    venues.value = res.data.records.map(venue => ({
+      ...venue,
+      image: venue.images ? JSON.parse(venue.images)[0] : '',
+      images: venue.images ? JSON.parse(venue.images) : []
+    }))
+  } catch (error) {
+    console.error('加载场地列表失败:', error)
+    ElMessage.error('加载场地列表失败')
+  } finally {
+    loading.value = false
   }
-  
-  // 分类筛选
-  if (filters.value.category) {
-    result = result.filter(item => item.category === filters.value.category)
+}
+
+// 加载申请记录
+const loadApplications = async () => {
+  try {
+    loading.value = true
+    const params = {
+      pageNum: 1,
+      pageSize: 100
+    }
+    const res = await getMyApplications(params)
+    applications.value = res.data.records.map(app => ({
+      ...app,
+      date: app.applyDate,
+      time: app.timeSlot,
+      statusText: getStatusText(app.status)
+    }))
+  } catch (error) {
+    console.error('加载申请记录失败:', error)
+    ElMessage.error('加载申请记录失败')
+  } finally {
+    loading.value = false
   }
-  
-  // 状态筛选
-  if (filters.value.status) {
-    result = result.filter(item => item.status === filters.value.status)
-  }
-  
-  return result
+}
+
+// 初始化加载
+onMounted(() => {
+  loadVenues()
+  loadApplications()
 })
 
-const applications = ref([
-  {
-    id: 1,
-    venueId: 1,
-    venueName: '篮球馆A场',
-    areaName: 'A1场地',
-    date: '2026-02-28',
-    time: '14:00-16:00',
-    activityType: '篮球',
-    participants: 10,
-    status: 'approved',
-    statusText: '已通过',
-    applicantName: '张三',
-    phone: '13800138000',
-    studentId: '2021001',
-    reason: '组织班级篮球活动，增强同学们的体质和团队协作能力。',
-    applyTime: '2026-02-20 10:30:00'
-  },
-  {
-    id: 2,
-    venueId: 2,
-    venueName: '羽毛球馆',
-    areaName: '1号场地',
-    date: '2026-03-01',
-    time: '09:00-11:00',
-    activityType: '羽毛球',
-    participants: 8,
-    status: 'pending',
-    statusText: '待审批',
-    applicantName: '李四',
-    phone: '13900139000',
-    studentId: '2021002',
-    reason: '羽毛球社团日常训练活动。',
-    applyTime: '2026-02-22 15:20:00'
-  },
-  {
-    id: 3,
-    venueId: 3,
-    venueName: '足球场',
-    areaName: '全场',
-    date: '2026-02-25',
-    time: '16:00-18:00',
-    activityType: '足球',
-    participants: 22,
-    status: 'rejected',
-    statusText: '已拒绝',
-    applicantName: '王五',
-    phone: '13700137000',
-    studentId: '2021003',
-    reason: '院系足球友谊赛。',
-    applyTime: '2026-02-18 09:15:00',
-    rejectReason: '该时段场地已被预约，请选择其他时段。'
+// 防抖函数
+let debounceTimer = null
+const debouncedLoadVenues = () => {
+  if (debounceTimer) {
+    clearTimeout(debounceTimer)
   }
-])
+  debounceTimer = setTimeout(() => {
+    loadVenues()
+  }, 500) // 500ms 防抖延迟
+}
+
+// 监听筛选条件变化
+watch(filters, () => {
+  debouncedLoadVenues()
+}, { deep: true })
+
+// 筛选后的场地列表
+const filteredVenues = computed(() => {
+  return venues.value
+})
+
+// 获取状态文本
+const getStatusText = (status) => {
+  const textMap = {
+    pending: '待审批',
+    approved: '已通过',
+    rejected: '已拒绝'
+  }
+  return textMap[status] || status
+}
 
 const handleApply = (venue) => {
   if (venue.status === 'busy') {
@@ -203,9 +213,22 @@ const handleApply = (venue) => {
   applyDialogVisible.value = true
 }
 
-const handleSubmitApply = (formData) => {
-  console.log('提交申请:', formData)
-  // 这里后期对接API
+const handleSubmitApply = async (formData) => {
+  try {
+    loading.value = true
+    await submitApplication(formData)
+    ElMessage.success('申请提交成功，请等待审核')
+    applyDialogVisible.value = false
+    // 重新加载申请记录
+    await loadApplications()
+    // 切换到申请记录标签页
+    activeTab.value = 'records'
+  } catch (error) {
+    console.error('提交申请失败:', error)
+    ElMessage.error(error.message || '提交申请失败')
+  } finally {
+    loading.value = false
+  }
 }
 
 const handleResetFilter = () => {
@@ -214,6 +237,7 @@ const handleResetFilter = () => {
     category: '',
     status: ''
   }
+  loadVenues()
 }
 
 const handleCancel = (row) => {
@@ -221,9 +245,19 @@ const handleCancel = (row) => {
     confirmButtonText: '确认',
     cancelButtonText: '取消',
     type: 'warning'
-  }).then(() => {
-    ElMessage.success('已取消申请')
-    // 这里后期对接API
+  }).then(async () => {
+    try {
+      loading.value = true
+      await cancelApplication(row.id)
+      ElMessage.success('已取消申请')
+      // 重新加载申请记录
+      await loadApplications()
+    } catch (error) {
+      console.error('取消申请失败:', error)
+      ElMessage.error(error.message || '取消申请失败')
+    } finally {
+      loading.value = false
+    }
   }).catch(() => {})
 }
 
@@ -244,13 +278,19 @@ const handleDelete = (row) => {
     confirmButtonText: '确认',
     cancelButtonText: '取消',
     type: 'warning'
-  }).then(() => {
-    const index = applications.value.findIndex(item => item.id === row.id)
-    if (index > -1) {
-      applications.value.splice(index, 1)
+  }).then(async () => {
+    try {
+      loading.value = true
+      await deleteApplication(row.id)
       ElMessage.success('已删除记录')
+      // 重新加载申请记录
+      await loadApplications()
+    } catch (error) {
+      console.error('删除记录失败:', error)
+      ElMessage.error(error.message || '删除记录失败')
+    } finally {
+      loading.value = false
     }
-    // 这里后期对接API
   }).catch(() => {})
 }
 

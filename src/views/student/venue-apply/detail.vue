@@ -186,6 +186,7 @@
                 size="large"
                 style="width: 100%"
                 @click="handleSubmit"
+                :loading="loading"
               >
                 提交申请
               </el-button>
@@ -206,6 +207,11 @@
     </div>
 
     <!-- 加载状态 -->
+    <div v-else-if="loading" class="loading-state">
+      <el-skeleton :rows="10" animated />
+    </div>
+
+    <!-- 场地不存在 -->
     <div v-else class="loading-state">
       <el-empty description="场地不存在或已被删除">
         <el-button type="primary" @click="goBack">返回场地列表</el-button>
@@ -219,12 +225,14 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Basketball, User } from '@element-plus/icons-vue'
-import { venues } from '@/mock/venues'
+import { getVenueById } from '@/api/venue'
+import { submitApplication } from '@/api/application'
 import ImageCarousel from '@/components/image-carousel/index.vue'
 
 const route = useRoute()
 const router = useRouter()
 const formRef = ref(null)
+const loading = ref(false)
 
 // 模拟用户创建的活动列表
 const userActivities = ref([
@@ -237,9 +245,21 @@ const userActivities = ref([
 // 获取场地详情
 const venue = ref(null)
 
-onMounted(() => {
+onMounted(async () => {
   const id = parseInt(route.params.id)
-  venue.value = venues.find(item => item.id === id)
+  try {
+    loading.value = true
+    const res = await getVenueById(id)
+    venue.value = {
+      ...res.data,
+      images: res.data.images ? JSON.parse(res.data.images) : []
+    }
+  } catch (error) {
+    console.error('加载场地详情失败:', error)
+    ElMessage.error('加载场地详情失败')
+  } finally {
+    loading.value = false
+  }
 })
 
 // 分类标签映射
@@ -326,27 +346,43 @@ const disabledDate = (time) => {
 const handleSubmit = async () => {
   if (!formRef.value) return
   
-  await formRef.value.validate((valid) => {
+  await formRef.value.validate(async (valid) => {
     if (valid) {
-      // 获取活动名称
-      const selectedActivity = userActivities.value.find(a => a.id === applyForm.value.activityId)
-      const activityName = selectedActivity ? selectedActivity.name : ''
-      
-      // 格式化时间段
-      const timeSlot = applyForm.value.timeRange ? 
-        `${applyForm.value.timeRange[0]}-${applyForm.value.timeRange[1]}` : ''
-      
-      console.log('提交申请:', {
-        ...applyForm.value,
-        activityName,
-        timeSlot
-      })
-      
-      ElMessage.success('申请提交成功，请等待审核')
-      // 这里后期对接API
-      setTimeout(() => {
-        router.push('/student/venue-apply')
-      }, 1500)
+      try {
+        loading.value = true
+        
+        // 获取活动名称
+        const selectedActivity = userActivities.value.find(a => a.id === applyForm.value.activityId)
+        const activityName = selectedActivity ? selectedActivity.name : ''
+        
+        // 格式化时间段
+        const timeSlot = applyForm.value.timeRange ? 
+          `${applyForm.value.timeRange[0]}-${applyForm.value.timeRange[1]}` : ''
+        
+        // 构建提交数据
+        const submitData = {
+          venueId: venue.value.id,
+          areaId: applyForm.value.areaId || null,
+          activityName: activityName,
+          activityType: applyForm.value.activityType,
+          applyDate: applyForm.value.date,
+          timeSlot: timeSlot,
+          participants: applyForm.value.participants,
+          description: applyForm.value.reason
+        }
+        
+        await submitApplication(submitData)
+        ElMessage.success('申请提交成功，请等待审核')
+        
+        setTimeout(() => {
+          router.push('/student/venue-apply')
+        }, 1500)
+      } catch (error) {
+        console.error('提交申请失败:', error)
+        ElMessage.error(error.message || '提交申请失败')
+      } finally {
+        loading.value = false
+      }
     }
   })
 }
