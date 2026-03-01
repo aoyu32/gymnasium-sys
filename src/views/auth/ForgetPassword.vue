@@ -65,6 +65,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Message, Lock, Key, Basketball } from '@element-plus/icons-vue'
+import { resetPassword, sendVerificationCode } from '@/api/auth'
 
 const router = useRouter()
 const formRef = ref(null)
@@ -113,16 +114,21 @@ const sendCode = async () => {
     ElMessage.warning('邮箱格式不正确')
     return
   }
-  
-  countdown.value = 60
-  const timer = setInterval(() => {
-    countdown.value--
-    if (countdown.value <= 0) {
-      clearInterval(timer)
-    }
-  }, 1000)
-  
-  ElMessage.success('验证码已发送到邮箱')
+
+  try {
+    await sendVerificationCode(forgetForm.value.email)
+    ElMessage.success('验证码已发送到邮箱')
+    
+    countdown.value = 60
+    const timer = setInterval(() => {
+      countdown.value--
+      if (countdown.value <= 0) {
+        clearInterval(timer)
+      }
+    }, 1000)
+  } catch (error) {
+    console.error('发送验证码失败:', error)
+  }
 }
 
 const handleReset = async () => {
@@ -130,11 +136,11 @@ const handleReset = async () => {
     if (valid) {
       loading.value = true
       try {
-        await new Promise(resolve => setTimeout(resolve, 1000))
+        await resetPassword(forgetForm.value)
         ElMessage.success('密码重置成功，请登录')
         router.push('/auth/login')
       } catch (error) {
-        ElMessage.error('重置失败，请重试')
+        console.error('重置失败:', error)
       } finally {
         loading.value = false
       }

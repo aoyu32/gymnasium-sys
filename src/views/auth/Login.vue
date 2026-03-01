@@ -60,6 +60,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { User, Lock, Basketball } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
+import { login } from '@/api/auth'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -94,15 +95,20 @@ const handleLogin = async () => {
     if (valid) {
       loading.value = true
       try {
-        // 模拟登录请求
-        await new Promise(resolve => setTimeout(resolve, 1000))
+        const res = await login({
+          username: loginForm.value.username,
+          password: loginForm.value.password,
+          role: loginForm.value.role
+        })
         
         // 设置用户信息
-        userStore.setToken('mock-token-' + Date.now())
-        userStore.setRole(loginForm.value.role)
+        userStore.setToken(res.data.token)
+        userStore.setRole(res.data.role)
         userStore.setUserInfo({
-          name: loginForm.value.username,
-          role: loginForm.value.role
+          userId: res.data.userId,
+          username: res.data.username,
+          name: res.data.name,
+          role: res.data.role
         })
 
         ElMessage.success('登录成功')
@@ -115,7 +121,7 @@ const handleLogin = async () => {
         }
         router.push(roleRoutes[loginForm.value.role])
       } catch (error) {
-        ElMessage.error('登录失败，请重试')
+        console.error('登录失败:', error)
       } finally {
         loading.value = false
       }

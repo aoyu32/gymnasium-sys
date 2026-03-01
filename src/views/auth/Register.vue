@@ -75,6 +75,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { User, Lock, Phone, Message, Basketball } from '@element-plus/icons-vue'
+import { register } from '@/api/auth'
 
 const router = useRouter()
 const formRef = ref(null)
@@ -122,11 +123,11 @@ const handleRegister = async () => {
     if (valid) {
       loading.value = true
       try {
-        await new Promise(resolve => setTimeout(resolve, 1000))
+        await register(registerForm.value)
         ElMessage.success('注册成功，请登录')
         router.push('/auth/login')
       } catch (error) {
-        ElMessage.error('注册失败，请重试')
+        console.error('注册失败:', error)
       } finally {
         loading.value = false
       }
