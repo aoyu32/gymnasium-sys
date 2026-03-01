@@ -276,7 +276,15 @@ const systemMenuItems = [
   { path: '/admin/system/home', title: '数据看板', icon: 'HomeFilled' },
   { path: '/admin/system/students', title: '学生管理', icon: 'User' },
   { path: '/admin/system/managers', title: '负责人管理', icon: 'UserFilled' },
-  { path: '/admin/system/equipment', title: '器材管理', icon: 'Box' },
+  { 
+    path: '/admin/system/equipment',
+    title: '器材管理',
+    icon: 'Box',
+    children: [
+      { path: '/admin/system/equipment/categories', title: '器材分类管理' },
+      { path: '/admin/system/equipment/applications', title: '器材申请管理' }
+    ]
+  },
   { path: '/admin/system/forum', title: '论坛管理', icon: 'ChatDotRound' }
 ]
 

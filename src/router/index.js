@@ -215,8 +215,22 @@ const routes = [
       {
         path: 'system/equipment',
         name: 'SystemEquipment',
-        component: () => import('@/views/admin/system/equipment/index.vue'),
-        meta: { title: '器材管理' }
+        redirect: '/admin/system/equipment/categories',
+        meta: { title: '器材管理' },
+        children: [
+          {
+            path: 'categories',
+            name: 'SystemEquipmentCategories',
+            component: () => import('@/views/admin/system/equipment/categories.vue'),
+            meta: { title: '器材分类管理' }
+          },
+          {
+            path: 'applications',
+            name: 'SystemEquipmentApplications',
+            component: () => import('@/views/admin/system/equipment/applications.vue'),
+            meta: { title: '器材申请管理' }
+          }
+        ]
       },
       {
         path: 'system/forum',
