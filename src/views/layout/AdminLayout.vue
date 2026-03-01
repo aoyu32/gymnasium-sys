@@ -285,7 +285,15 @@ const systemMenuItems = [
       { path: '/admin/system/equipment/applications', title: '器材申请管理' }
     ]
   },
-  { path: '/admin/system/forum', title: '论坛管理', icon: 'ChatDotRound' }
+  { 
+    path: '/admin/system/forum',
+    title: '论坛管理',
+    icon: 'ChatDotRound',
+    children: [
+      { path: '/admin/system/forum/categories', title: '帖子分类管理' },
+      { path: '/admin/system/forum/posts', title: '帖子信息管理' }
+    ]
+  }
 ]
 
 // 根据角色返回对应的菜单

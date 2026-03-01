@@ -235,8 +235,22 @@ const routes = [
       {
         path: 'system/forum',
         name: 'SystemForum',
-        component: () => import('@/views/admin/system/forum/index.vue'),
-        meta: { title: '论坛管理' }
+        redirect: '/admin/system/forum/categories',
+        meta: { title: '论坛管理' },
+        children: [
+          {
+            path: 'categories',
+            name: 'SystemForumCategories',
+            component: () => import('@/views/admin/system/forum/categories.vue'),
+            meta: { title: '帖子分类管理' }
+          },
+          {
+            path: 'posts',
+            name: 'SystemForumPosts',
+            component: () => import('@/views/admin/system/forum/posts.vue'),
+            meta: { title: '帖子信息管理' }
+          }
+        ]
       }
     ]
   },
