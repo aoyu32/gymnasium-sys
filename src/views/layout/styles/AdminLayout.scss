@@ -118,3 +118,44 @@
     overflow-y: auto;
   }
 }
+
+
+// 头像上传样式
+.avatar-uploader {
+  .avatar {
+    width: 120px;
+    height: 120px;
+    display: block;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  :deep(.el-upload) {
+    border: 1px dashed #d9d9d9;
+    border-radius: 50%;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s;
+    width: 120px;
+    height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &:hover {
+      border-color: #f5222d;
+    }
+  }
+
+  .avatar-uploader-icon {
+    font-size: 28px;
+    color: #8c939d;
+  }
+}
+
+.upload-tip {
+  font-size: 12px;
+  color: #909399;
+  margin-top: 8px;
+}
