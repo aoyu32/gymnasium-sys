@@ -13,6 +13,7 @@
             v-model="registerForm.studentId"
             placeholder="请输入学号"
             :prefix-icon="User"
+            clearable
           />
         </el-form-item>
         <el-form-item prop="name">
@@ -20,6 +21,7 @@
             v-model="registerForm.name"
             placeholder="请输入姓名"
             :prefix-icon="User"
+            clearable
           />
         </el-form-item>
         <el-form-item prop="password">
@@ -45,6 +47,7 @@
             v-model="registerForm.phone"
             placeholder="请输入手机号"
             :prefix-icon="Phone"
+            clearable
           />
         </el-form-item>
         <el-form-item prop="email">
@@ -52,6 +55,7 @@
             v-model="registerForm.email"
             placeholder="请输入邮箱"
             :prefix-icon="Message"
+            clearable
           />
         </el-form-item>
         <el-form-item>

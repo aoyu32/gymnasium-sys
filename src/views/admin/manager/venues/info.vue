@@ -46,7 +46,7 @@
       </div>
 
       <!-- 场地列表 -->
-      <el-table :data="paginatedVenues" stripe style="margin-top: 20px">
+      <el-table :data="paginatedVenues" stripe style="margin-top: 20px" v-loading="loading">
         <el-table-column prop="image" label="场地图片" width="100">
           <template #default="{ row }">
             <el-image
@@ -104,7 +104,7 @@
         v-model:current-page="currentPage"
         v-model:page-size="pageSize"
         :page-sizes="[5, 10, 20, 50]"
-        :total="filteredVenues.length"
+        :total="total"
         layout="total, sizes, prev, pager, next, jumper"
         style="margin-top: 20px; justify-content: flex-end"
         @size-change="handleSizeChange"
@@ -410,9 +410,10 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Search } from '@element-plus/icons-vue'
+import { getVenuePage, getVenueById, addVenue, updateVenue, deleteVenue } from '@/api/venue'
 
 const searchKeyword = ref('')
 const filterCategory = ref('')
@@ -426,10 +427,12 @@ const previewDialogVisible = ref(false)
 const previewImageUrl = ref('')
 const detailDialogVisible = ref(false)
 const detailVenue = ref(null)
+const loading = ref(false)
 
 // 分页相关
 const currentPage = ref(1)
 const pageSize = ref(10)
+const total = ref(0)
 
 // 区域管理相关
 const areaDialogVisible = ref(false)
@@ -468,6 +471,47 @@ const areaRules = {
   capacity: [{ required: true, message: '请输入容纳人数', trigger: 'blur' }]
 }
 
+// 场地列表数据
+const venues = ref([])
+
+// 加载场地列表
+const loadVenues = async () => {
+  try {
+    loading.value = true
+    const params = {
+      pageNum: currentPage.value,
+      pageSize: pageSize.value,
+      name: searchKeyword.value || undefined,
+      category: filterCategory.value || undefined,
+      status: filterStatus.value || undefined
+    }
+    const res = await getVenuePage(params)
+    venues.value = res.data.records.map(venue => ({
+      ...venue,
+      // 解析images JSON字符串
+      image: venue.images ? JSON.parse(venue.images)[0] : '',
+      images: venue.images ? JSON.parse(venue.images) : []
+    }))
+    total.value = res.data.total
+  } catch (error) {
+    console.error('加载场地列表失败:', error)
+    ElMessage.error('加载场地列表失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+// 初始化加载
+onMounted(() => {
+  loadVenues()
+})
+
+// 监听搜索和筛选条件变化
+watch([searchKeyword, filterCategory, filterStatus], () => {
+  currentPage.value = 1
+  loadVenues()
+})
+
 // 计算场地状态（根据区域维护情况自动判断）
 const calculateVenueStatus = (venue) => {
   if (!venue.areas || venue.areas.length === 0) {
@@ -485,122 +529,14 @@ const calculateVenueStatus = (venue) => {
   }
 }
 
-const venues = ref([
-  {
-    id: 1,
-    name: '篮球馆A场',
-    category: 'basketball',
-    capacity: 20,
-    price: 50,
-    status: 'available',
-    image: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=400',
-    images: [
-      'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=800',
-      'https://images.unsplash.com/photo-1519766304817-4f37bda74a26?w=800',
-      'https://images.unsplash.com/photo-1608245449230-4ac19066d2d0?w=800'
-    ],
-    description: '标准篮球场，设施完善',
-    notice: '请提前预约，按时到达场地\n请穿着运动服装和运动鞋\n请爱护场地设施\n请保持场地清洁',
-    areas: [
-      { id: 1, name: 'A1场地', inUse: false, maintenance: false, capacity: 10 },
-      { id: 2, name: 'A2场地', inUse: true, maintenance: false, capacity: 10 }
-    ]
-  },
-  {
-    id: 2,
-    name: '羽毛球馆',
-    category: 'badminton',
-    capacity: 16,
-    price: 30,
-    status: 'partial_maintenance',
-    image: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=400',
-    images: [
-      'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=800',
-      'https://images.unsplash.com/photo-1612872087720-bb876e2e67d1?w=800',
-      'https://images.unsplash.com/photo-1553778263-73a83bab9b0c?w=800'
-    ],
-    description: '8片标准羽毛球场地',
-    notice: '请提前预约，按时到达场地\n请穿着运动服装和运动鞋\n请爱护场地设施\n请保持场地清洁',
-    areas: [
-      { id: 1, name: '1号场地', inUse: false, maintenance: false, capacity: 4 },
-      { id: 2, name: '2号场地', inUse: false, maintenance: true, capacity: 4 },
-      { id: 3, name: '3号场地', inUse: true, maintenance: false, capacity: 4 },
-      { id: 4, name: '4号场地', inUse: false, maintenance: false, capacity: 4 }
-    ]
-  },
-  {
-    id: 3,
-    name: '足球场',
-    category: 'football',
-    capacity: 30,
-    price: 100,
-    status: 'maintenance',
-    image: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=400',
-    images: [
-      'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800',
-      'https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?w=800',
-      'https://images.unsplash.com/photo-1589487391730-58f20eb2c308?w=800'
-    ],
-    description: '标准11人制足球场',
-    notice: '请提前预约，按时到达场地\n请穿着运动服装和运动鞋\n请爱护场地设施\n请保持场地清洁',
-    areas: [
-      { id: 1, name: '全场', inUse: false, maintenance: true, capacity: 30 }
-    ]
-  },
-  {
-    id: 4,
-    name: '网球场',
-    category: 'tennis',
-    capacity: 8,
-    price: 40,
-    status: 'available',
-    image: 'https://images.unsplash.com/photo-1622279457486-62dcc4a431d6?w=400',
-    images: [
-      'https://images.unsplash.com/photo-1622279457486-62dcc4a431d6?w=800',
-      'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=800',
-      'https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?w=800'
-    ],
-    description: '4片标准网球场地',
-    notice: '请提前预约，按时到达场地\n请穿着运动服装和运动鞋\n请爱护场地设施\n请保持场地清洁',
-    areas: [
-      { id: 1, name: '1号场地', inUse: false, maintenance: false, capacity: 2 },
-      { id: 2, name: '2号场地', inUse: true, maintenance: false, capacity: 2 },
-      { id: 3, name: '3号场地', inUse: false, maintenance: false, capacity: 2 },
-      { id: 4, name: '4号场地', inUse: false, maintenance: false, capacity: 2 }
-    ]
-  },
-  {
-    id: 5,
-    name: '乒乓球室',
-    category: 'tabletennis',
-    capacity: 20,
-    price: 15,
-    status: 'available',
-    image: 'https://images.unsplash.com/photo-1609710228159-0fa9bd7c0827?w=400',
-    images: [
-      'https://images.unsplash.com/photo-1609710228159-0fa9bd7c0827?w=800',
-      'https://images.unsplash.com/photo-1534158914592-062992fbe900?w=800'
-    ],
-    description: '10张标准乒乓球台',
-    notice: '请提前预约，按时到达场地\n请穿着运动服装和运动鞋\n请爱护场地设施\n请保持场地清洁',
-    areas: []
-  }
-])
-
+// 直接返回后端分页数据
 const filteredVenues = computed(() => {
-  return venues.value.filter(venue => {
-    const matchKeyword = !searchKeyword.value || venue.name.includes(searchKeyword.value)
-    const matchCategory = !filterCategory.value || venue.category === filterCategory.value
-    const matchStatus = !filterStatus.value || venue.status === filterStatus.value
-    return matchKeyword && matchCategory && matchStatus
-  })
+  return venues.value
 })
 
-// 分页后的数据
+// 直接返回后端分页数据
 const paginatedVenues = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value
-  const end = start + pageSize.value
-  return filteredVenues.value.slice(start, end)
+  return venues.value
 })
 
 const categoryMap = {
@@ -681,24 +617,61 @@ const handleAdd = () => {
   dialogVisible.value = true
 }
 
-const handleViewDetail = (row) => {
-  detailVenue.value = row
-  detailDialogVisible.value = true
+const handleViewDetail = async (row) => {
+  try {
+    loading.value = true
+    // 从后端获取完整的场地信息（包含区域）
+    const res = await getVenueById(row.id)
+    const venue = res.data
+    
+    // 解析images
+    detailVenue.value = {
+      ...venue,
+      images: venue.images ? JSON.parse(venue.images) : []
+    }
+    
+    detailDialogVisible.value = true
+  } catch (error) {
+    console.error('加载场地详情失败:', error)
+    ElMessage.error('加载场地详情失败')
+  } finally {
+    loading.value = false
+  }
 }
 
-const handleEdit = (row) => {
+const handleEdit = async (row) => {
   dialogTitle.value = '编辑场地'
   editingId.value = row.id
-  formData.value = { ...row, areas: [...(row.areas || [])], images: [...(row.images || [])] }
   
-  // 将已有图片转换为fileList格式
-  fileList.value = (row.images || []).map((url, index) => ({
-    name: `image-${index + 1}.jpg`,
-    url: url,
-    uid: Date.now() + index
-  }))
-  
-  dialogVisible.value = true
+  try {
+    loading.value = true
+    // 从后端获取完整的场地信息（包含区域）
+    const res = await getVenueById(row.id)
+    const venue = res.data
+    
+    // 解析images
+    const images = venue.images ? JSON.parse(venue.images) : []
+    
+    formData.value = {
+      ...venue,
+      images: images,
+      areas: venue.areas || []
+    }
+    
+    // 将已有图片转换为fileList格式
+    fileList.value = images.map((url, index) => ({
+      name: `image-${index + 1}.jpg`,
+      url: url,
+      uid: Date.now() + index
+    }))
+    
+    dialogVisible.value = true
+  } catch (error) {
+    console.error('加载场地详情失败:', error)
+    ElMessage.error('加载场地详情失败')
+  } finally {
+    loading.value = false
+  }
 }
 
 // 图片上传相关处理
@@ -751,7 +724,7 @@ const handlePicturePreview = (file) => {
 const handleSubmit = async () => {
   if (!formRef.value) return
   
-  await formRef.value.validate((valid) => {
+  await formRef.value.validate(async (valid) => {
     if (valid) {
       // 确保至少有一张图片
       if (!formData.value.images || formData.value.images.length === 0) {
@@ -759,34 +732,38 @@ const handleSubmit = async () => {
         return
       }
       
-      // 使用第一张图片作为封面
-      const venueData = {
-        ...formData.value,
-        image: formData.value.images[0]
-      }
-      
-      if (editingId.value) {
-        // 编辑
-        const index = venues.value.findIndex(v => v.id === editingId.value)
-        if (index !== -1) {
-          venues.value[index] = { ...venueData, id: editingId.value }
+      try {
+        loading.value = true
+        // 将images数组转为JSON字符串
+        const venueData = {
+          ...formData.value,
+          images: JSON.stringify(formData.value.images)
         }
-        ElMessage.success('场地信息更新成功')
-      } else {
-        // 添加
-        const newVenue = {
-          ...venueData,
-          id: Date.now()
+        
+        if (editingId.value) {
+          // 编辑
+          await updateVenue(editingId.value, venueData)
+          ElMessage.success('场地信息更新成功')
+        } else {
+          // 添加
+          await addVenue(venueData)
+          ElMessage.success('场地添加成功')
         }
-        venues.value.push(newVenue)
-        ElMessage.success('场地添加成功')
+        
+        dialogVisible.value = false
+        // 重新加载列表
+        await loadVenues()
+      } catch (error) {
+        console.error('保存场地失败:', error)
+        ElMessage.error(error.message || '保存场地失败')
+      } finally {
+        loading.value = false
       }
-      dialogVisible.value = false
     }
   })
 }
 
-const handleToggleStatus = (row) => {
+const handleToggleStatus = async (row) => {
   // 如果场地有区域，根据区域维护情况自动计算状态
   if (row.areas && row.areas.length > 0) {
     const hasMaintenanceAreas = row.areas.some(area => area.maintenance)
@@ -819,9 +796,24 @@ const handleToggleStatus = (row) => {
       cancelButtonText: '取消',
       type: 'warning'
     }
-  ).then(() => {
-    row.status = newStatus
-    ElMessage.success('状态更新成功')
+  ).then(async () => {
+    try {
+      loading.value = true
+      // 更新场地状态
+      await updateVenue(row.id, {
+        ...row,
+        status: newStatus,
+        images: JSON.stringify(row.images)
+      })
+      ElMessage.success('状态更新成功')
+      // 重新加载列表
+      await loadVenues()
+    } catch (error) {
+      console.error('更新状态失败:', error)
+      ElMessage.error('更新状态失败')
+    } finally {
+      loading.value = false
+    }
   }).catch(() => {})
 }
 
@@ -834,19 +826,40 @@ const handleDelete = (row) => {
       cancelButtonText: '取消',
       type: 'warning'
     }
-  ).then(() => {
-    const index = venues.value.findIndex(v => v.id === row.id)
-    if (index !== -1) {
-      venues.value.splice(index, 1)
+  ).then(async () => {
+    try {
+      loading.value = true
+      await deleteVenue(row.id)
       ElMessage.success('场地删除成功')
+      // 如果当前页没有数据了，回到上一页
+      if (venues.value.length === 1 && currentPage.value > 1) {
+        currentPage.value--
+      }
+      // 重新加载列表
+      await loadVenues()
+    } catch (error) {
+      console.error('删除场地失败:', error)
+      ElMessage.error('删除场地失败')
+    } finally {
+      loading.value = false
     }
   }).catch(() => {})
 }
 
 // 区域管理相关方法
-const handleManageAreas = (row) => {
-  currentVenue.value = row
-  areaDialogVisible.value = true
+const handleManageAreas = async (row) => {
+  try {
+    loading.value = true
+    // 从后端获取完整的场地信息（包含区域）
+    const res = await getVenueById(row.id)
+    currentVenue.value = res.data
+    areaDialogVisible.value = true
+  } catch (error) {
+    console.error('加载场地详情失败:', error)
+    ElMessage.error('加载场地详情失败')
+  } finally {
+    loading.value = false
+  }
 }
 
 const handleAddArea = () => {
@@ -937,10 +950,12 @@ const handleDeleteArea = (index) => {
 const handleSizeChange = (val) => {
   pageSize.value = val
   currentPage.value = 1
+  loadVenues()
 }
 
 const handleCurrentChange = (val) => {
   currentPage.value = val
+  loadVenues()
 }
 </script>
 

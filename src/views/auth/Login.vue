@@ -9,7 +9,7 @@
 
       <el-form ref="formRef" :model="loginForm" :rules="rules" size="large">
         <el-form-item prop="role">
-          <el-select v-model="loginForm.role" placeholder="选择登录角色" style="width: 100%">
+          <el-select v-model="loginForm.role" placeholder="选择登录角色" style="width: 100%" clearable>
             <el-option label="学生" value="student" />
             <el-option label="场地负责人" value="manager" />
             <el-option label="系统管理员" value="admin" />
@@ -20,6 +20,7 @@
             v-model="loginForm.username"
             :placeholder="usernamePlaceholder"
             :prefix-icon="User"
+            clearable
           />
         </el-form-item>
         <el-form-item prop="password">

@@ -13,6 +13,7 @@
             v-model="forgetForm.email"
             placeholder="请输入邮箱"
             :prefix-icon="Message"
+            clearable
           />
         </el-form-item>
         <el-form-item prop="code">
@@ -21,6 +22,7 @@
               v-model="forgetForm.code"
               placeholder="请输入验证码"
               :prefix-icon="Key"
+              clearable
             />
             <el-button :disabled="countdown > 0" @click="sendCode">
               {{ countdown > 0 ? `${countdown}秒后重试` : '发送验证码' }}

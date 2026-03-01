@@ -12,7 +12,7 @@ dist
 dist-ssr
 *.local
 
-gs-back.sql
+gs_back.sql
 
 # Editor directories and files
 .vscode/*
