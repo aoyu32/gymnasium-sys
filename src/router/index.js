@@ -178,7 +178,13 @@ const routes = [
             path: 'borrow',
             name: 'ManagerEquipmentBorrow',
             component: () => import('@/views/admin/manager/equipment/borrow.vue'),
-            meta: { title: '器材借还管理' }
+            meta: { title: '器材借用管理' }
+          },
+          {
+            path: 'return',
+            name: 'ManagerEquipmentReturn',
+            component: () => import('@/views/admin/manager/equipment/return.vue'),
+            meta: { title: '器材归还管理' }
           }
         ]
       },
