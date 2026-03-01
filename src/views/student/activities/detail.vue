@@ -25,7 +25,7 @@
             </el-descriptions-item>
             <el-descriptions-item label="活动地点">
               <el-icon><Location /></el-icon>
-              {{ activity.venue }}
+              {{ activity.venue }}{{ activity.area ? ` - ${activity.area}` : '' }}
             </el-descriptions-item>
             <el-descriptions-item label="参与人数">
               <el-icon><User /></el-icon>
@@ -38,6 +38,9 @@
             </el-descriptions-item>
             <el-descriptions-item label="活动分类">
               <el-tag type="success" effect="plain">{{ getCategoryLabel }}</el-tag>
+            </el-descriptions-item>
+            <el-descriptions-item label="创建人">
+              {{ activity.creator }}
             </el-descriptions-item>
           </el-descriptions>
         </div>
