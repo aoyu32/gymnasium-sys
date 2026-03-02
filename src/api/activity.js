@@ -125,3 +125,25 @@ export function getMyRegistrations(params) {
         params
     })
 }
+
+/**
+ * 查询我创建的活动的报名列表（场地负责人审核用）
+ */
+export function getActivityRegistrations(activityId, params) {
+    return request({
+        url: `/activity-registrations/activity/${activityId}`,
+        method: 'get',
+        params
+    })
+}
+
+/**
+ * 查询所有我创建的活动的报名申请
+ */
+export function getAllMyActivityRegistrations(params) {
+    return request({
+        url: '/activity-registrations/my-activities',
+        method: 'get',
+        params
+    })
+}

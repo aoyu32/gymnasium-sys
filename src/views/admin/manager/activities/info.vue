@@ -102,8 +102,24 @@
           <template #default="{ row }">
             <div style="display: flex; gap: 8px; flex-wrap: nowrap; white-space: nowrap;">
               <el-button link type="primary" size="small" @click="handleViewDetail(row)">查看详情</el-button>
-              <el-button link type="primary" size="small" @click="handleEdit(row)">编辑</el-button>
-              <el-button link type="danger" size="small" @click="handleDelete(row)">删除</el-button>
+              <el-button 
+                link 
+                type="primary" 
+                size="small" 
+                :disabled="!canEdit(row)"
+                @click="handleEdit(row)"
+              >
+                编辑
+              </el-button>
+              <el-button 
+                link 
+                type="danger" 
+                size="small" 
+                :disabled="!canDelete(row)"
+                @click="handleDelete(row)"
+              >
+                删除
+              </el-button>
             </div>
           </template>
         </el-table-column>
@@ -114,7 +130,7 @@
         v-model:current-page="currentPage"
         v-model:page-size="pageSize"
         :page-sizes="[5, 10, 20, 50]"
-        :total="filteredActivities.length"
+        :total="total"
         layout="total, sizes, prev, pager, next, jumper"
         style="margin-top: 20px; justify-content: flex-end"
         @size-change="handleSizeChange"
@@ -155,29 +171,24 @@
         </el-row>
         <el-row :gutter="20">
           <el-col :span="12">
-            <el-form-item label="活动时间" prop="time">
+            <el-form-item label="活动时间" prop="activityTime">
               <el-date-picker
-                v-model="formData.time"
+                v-model="formData.activityTime"
                 type="datetime"
                 placeholder="选择活动时间"
                 format="YYYY-MM-DD HH:mm"
-                value-format="YYYY-MM-DD HH:mm"
+                value-format="YYYY-MM-DDTHH:mm:ss"
                 style="width: 100%"
               />
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="场地" prop="venue">
-              <el-input v-model="formData.venue" placeholder="请输入场地名称" />
+            <el-form-item label="场地" prop="areaName">
+              <el-input v-model="formData.areaName" placeholder="请输入场地名称" />
             </el-form-item>
           </el-col>
         </el-row>
         <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="区域" prop="area">
-              <el-input v-model="formData.area" placeholder="请输入区域名称" />
-            </el-form-item>
-          </el-col>
           <el-col :span="12">
             <el-form-item label="最大人数" prop="maxParticipants">
               <el-input-number v-model="formData.maxParticipants" :min="1" :max="1000" style="width: 100%" />
@@ -186,11 +197,12 @@
         </el-row>
         <el-row :gutter="20">
           <el-col :span="12">
-            <el-form-item label="活动类型" prop="activityType">
-              <el-radio-group v-model="formData.activityType">
-                <el-radio label="public">公共活动</el-radio>
-                <el-radio label="private">私人活动</el-radio>
-              </el-radio-group>
+            <el-form-item label="活动标签" prop="tag">
+              <el-select v-model="formData.tag" placeholder="请选择活动标签" clearable style="width: 100%">
+                <el-option label="无标签" value="" />
+                <el-option label="热门活动" value="hot" />
+                <el-option label="新活动" value="new" />
+              </el-select>
             </el-form-item>
           </el-col>
         </el-row>
@@ -205,6 +217,26 @@
             <el-icon v-else class="image-uploader-icon"><Plus /></el-icon>
           </el-upload>
           <div class="upload-tip">建议尺寸：400x300，支持jpg、png格式</div>
+        </el-form-item>
+        <el-form-item label="活动详情" prop="description">
+          <el-input
+            v-model="formData.description"
+            type="textarea"
+            :rows="5"
+            placeholder="请详细描述活动内容、要求、注意事项等信息"
+            maxlength="500"
+            show-word-limit
+          />
+        </el-form-item>
+        <el-form-item label="活动须知" prop="notice">
+          <el-input
+            v-model="formData.notice"
+            type="textarea"
+            :rows="4"
+            placeholder="请填写参加活动的注意事项，每行一条（选填）"
+            maxlength="300"
+            show-word-limit
+          />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -255,7 +287,7 @@
             <el-col :span="12">
               <div class="detail-item">
                 <span class="label">活动地点：</span>
-                <span class="value">{{ currentActivity.venue }}{{ currentActivity.area ? ` - ${currentActivity.area}` : '' }}</span>
+                <span class="value">{{ currentActivity.venue }}</span>
               </div>
             </el-col>
             <el-col :span="12">
@@ -290,20 +322,16 @@
         </div>
 
         <!-- 活动详情 -->
-        <div class="detail-section" v-if="getActivityDescription(currentActivity)">
+        <div class="detail-section" v-if="currentActivity.description">
           <h3 class="section-title">活动详情</h3>
-          <p class="description-text">{{ getActivityDescription(currentActivity) }}</p>
+          <p class="description-text">{{ currentActivity.description }}</p>
         </div>
 
         <!-- 活动须知 -->
-        <div class="detail-section">
+        <div class="detail-section" v-if="currentActivity.notice">
           <h3 class="section-title">活动须知</h3>
           <ul class="notice-list">
-            <li>请提前15分钟到达活动场地</li>
-            <li>请穿着运动服装和运动鞋</li>
-            <li>请自备水杯，注意补充水分</li>
-            <li>如有身体不适，请及时告知组织者</li>
-            <li>请遵守场地规则，爱护公共设施</li>
+            <li v-for="(item, index) in currentActivity.notice.split('\n')" :key="index">{{ item }}</li>
           </ul>
         </div>
       </div>
@@ -315,10 +343,10 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Search } from '@element-plus/icons-vue'
-import { activities } from '@/mock/activities'
+import { getActivityPage, createActivity, updateActivity, deleteActivity, getActivityById } from '@/api/activity'
 
 const searchKeyword = ref('')
 const filterCategory = ref('')
@@ -330,33 +358,122 @@ const dialogTitle = ref('添加活动')
 const formRef = ref(null)
 const editingId = ref(null)
 const currentActivity = ref(null)
+const loading = ref(false)
+const currentUserId = ref(null) // 当前登录用户ID
 
 // 分页相关
 const currentPage = ref(1)
 const pageSize = ref(10)
+const total = ref(0)
 
 const formData = ref({
   title: '',
   category: '',
-  time: '',
-  venue: '',
-  area: '',
+  activityTime: '',
+  areaName: '',
   maxParticipants: 10,
   activityType: 'public',
   image: '',
-  participants: 0
+  description: '',
+  notice: '',
+  tag: ''
 })
 
 const rules = {
   title: [{ required: true, message: '请输入活动名称', trigger: 'blur' }],
   category: [{ required: true, message: '请选择活动分类', trigger: 'change' }],
-  time: [{ required: true, message: '请选择活动时间', trigger: 'change' }],
-  venue: [{ required: true, message: '请输入活动地点', trigger: 'blur' }],
+  activityTime: [{ required: true, message: '请选择活动时间', trigger: 'change' }],
+  areaName: [{ required: true, message: '请输入活动地点', trigger: 'blur' }],
   maxParticipants: [{ required: true, message: '请输入最大人数', trigger: 'blur' }],
-  image: [{ required: true, message: '请输入活动封面URL', trigger: 'blur' }]
+  description: [{ required: true, message: '请输入活动详情', trigger: 'blur' }]
 }
 
-const activitiesList = ref([...activities])
+const activitiesList = ref([])
+
+// 加载活动列表
+const loadActivities = async () => {
+  try {
+    loading.value = true
+    const params = {
+      pageNum: currentPage.value,
+      pageSize: pageSize.value,
+      category: filterCategory.value || undefined,
+      activityType: filterType.value || undefined,
+      keyword: searchKeyword.value || undefined,
+      approvalStatus: 'all' // 传入'all'表示查询所有审核状态的活动
+    }
+    const res = await getActivityPage(params)
+    
+    // 转换数据格式
+    activitiesList.value = res.data.records.map(item => ({
+      ...item,
+      time: formatDateTime(item.activityTime),
+      venue: item.areaName || item.venueName || '待定',
+      participants: item.currentParticipants,
+      creator: item.creatorName || '未知'
+    }))
+    
+    total.value = res.data.total
+  } catch (error) {
+    console.error('加载活动列表失败:', error)
+    ElMessage.error('加载活动列表失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+// 格式化日期时间
+const formatDateTime = (dateTimeStr) => {
+  if (!dateTimeStr) return ''
+  const date = new Date(dateTimeStr)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  return `${year}-${month}-${day} ${hours}:${minutes}`
+}
+
+// 初始化加载
+onMounted(() => {
+  // 从localStorage获取当前用户ID（登录时应该存储了userId）
+  const userId = localStorage.getItem('userId')
+  if (userId) {
+    currentUserId.value = parseInt(userId)
+  }
+  console.log('当前用户ID:', currentUserId.value)
+  loadActivities()
+})
+
+// 判断是否可以编辑
+// 规则：只能编辑自己创建的活动，或者场地负责人可以编辑学生创建的私人活动
+const canEdit = (activity) => {
+  const role = localStorage.getItem('role')
+  // 如果是自己创建的活动，可以编辑
+  if (activity.creatorId === currentUserId.value) {
+    return true
+  }
+  // 如果是场地负责人，可以编辑学生创建的私人活动
+  if (role === 'manager' && activity.activityType === 'private') {
+    return true
+  }
+  return false
+}
+
+// 判断是否可以删除
+// 规则：只能删除自己创建的活动，或者场地负责人可以删除学生创建的私人活动
+const canDelete = (activity) => {
+  const role = localStorage.getItem('role')
+  // 如果是自己创建的活动，可以删除
+  if (activity.creatorId === currentUserId.value) {
+    return true
+  }
+  // 如果是场地负责人，可以删除学生创建的私人活动
+  if (role === 'manager' && activity.activityType === 'private') {
+    return true
+  }
+  return false
+}
 
 const filteredActivities = computed(() => {
   return activitiesList.value.filter(activity => {
@@ -376,9 +493,7 @@ const filteredActivities = computed(() => {
 
 // 分页后的数据
 const paginatedActivities = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value
-  const end = start + pageSize.value
-  return filteredActivities.value.slice(start, end)
+  return filteredActivities.value
 })
 
 const categoryMap = {
@@ -428,78 +543,108 @@ const getActivityStatusText = (activity) => {
   return textMap[status] || ''
 }
 
-const getActivityDescription = (activity) => {
-  const descriptions = {
-    basketball: '本次篮球活动旨在促进同学们之间的交流与合作，提高篮球技能。无论你是篮球高手还是初学者，都欢迎参加。我们将进行友谊赛和技巧训练，让每个人都能享受篮球的乐趣。',
-    football: '足球是一项充满激情的运动，本次活动将组织友谊赛和基础训练。欢迎所有热爱足球的同学参加，一起在绿茵场上挥洒汗水，感受团队合作的魅力。',
-    badminton: '羽毛球是一项老少皆宜的运动，本次活动将提供专业教练指导，帮助大家提高技术水平。无论是单打还是双打，都能找到适合自己的训练方式。',
-    tabletennis: '乒乓球作为国球，深受大家喜爱。本次活动将举办比赛和训练，让大家在切磋中提高球技，在交流中增进友谊。',
-    tennis: '网球是一项优雅的运动，本次活动将提供专业场地和器材，欢迎网球爱好者参加。我们将进行技术指导和友谊赛，让大家享受网球的乐趣。',
-    volleyball: '排球是一项团队运动，强调配合与默契。本次活动将组织训练和比赛，让大家在运动中增强体质，培养团队精神。',
-    swimming: '游泳是一项全身运动，对身体健康非常有益。本次活动将提供专业教练指导，帮助大家掌握正确的游泳技巧，提高游泳水平。',
-    fitness: '健身活动将提供专业的器械和指导，帮助大家科学锻炼，塑造健康体魄。无论是增肌还是减脂，都能找到适合自己的训练方案。',
-    running: '跑步是最简单有效的运动方式，本次活动将组织集体晨跑，让大家在清晨的阳光下开启活力的一天，享受运动的快乐。',
-    martialarts: '武术是中华传统文化的瑰宝，本次活动将教授基本功和套路，让大家感受武术的魅力，强身健体，修身养性。',
-    other: '本次活动将为大家提供一个交流和锻炼的平台，欢迎所有热爱运动的同学参加，一起享受运动的乐趣。'
-  }
-  return descriptions[activity.category] || descriptions.other
-}
-
 const handleAdd = () => {
   dialogTitle.value = '添加活动'
   editingId.value = null
   formData.value = {
     title: '',
     category: '',
-    time: '',
-    venue: '',
-    area: '',
+    activityTime: '',
+    areaName: '',
     maxParticipants: 10,
     activityType: 'public',
     image: '',
-    participants: 0
+    description: '',
+    notice: '',
+    tag: ''
   }
   dialogVisible.value = true
 }
 
-const handleEdit = (row) => {
-  dialogTitle.value = '编辑活动'
-  editingId.value = row.id
-  formData.value = { ...row }
-  dialogVisible.value = true
+const handleEdit = async (row) => {
+  try {
+    loading.value = true
+    const res = await getActivityById(row.id)
+    dialogTitle.value = '编辑活动'
+    editingId.value = row.id
+    formData.value = {
+      title: res.data.title,
+      category: res.data.category,
+      activityTime: res.data.activityTime,
+      areaName: res.data.areaName || res.data.venueName || '',
+      maxParticipants: res.data.maxParticipants,
+      activityType: res.data.activityType,
+      image: res.data.image || '',
+      description: res.data.description || '',
+      notice: res.data.notice || '',
+      tag: res.data.tag || ''
+    }
+    dialogVisible.value = true
+  } catch (error) {
+    console.error('加载活动详情失败:', error)
+    ElMessage.error('加载活动详情失败')
+  } finally {
+    loading.value = false
+  }
 }
 
 const handleSubmit = async () => {
   if (!formRef.value) return
   
-  await formRef.value.validate((valid) => {
+  await formRef.value.validate(async (valid) => {
     if (valid) {
-      if (editingId.value) {
-        // 编辑
-        const index = activitiesList.value.findIndex(v => v.id === editingId.value)
-        if (index !== -1) {
-          activitiesList.value[index] = { ...formData.value, id: editingId.value }
+      try {
+        loading.value = true
+        const submitData = {
+          title: formData.value.title,
+          category: formData.value.category,
+          // activityType由后端根据用户角色自动设置，不需要前端传递
+          activityTime: formData.value.activityTime,
+          areaName: formData.value.areaName,
+          maxParticipants: formData.value.maxParticipants,
+          description: formData.value.description,
+          notice: formData.value.notice,
+          image: formData.value.image,
+          tag: formData.value.tag
         }
-        ElMessage.success('活动信息更新成功')
-      } else {
-        // 添加
-        const newActivity = {
-          ...formData.value,
-          id: Date.now(),
-          status: 'new',
-          statusText: '最新'
+        
+        if (editingId.value) {
+          await updateActivity(editingId.value, submitData)
+          ElMessage.success('活动信息更新成功')
+        } else {
+          await createActivity(submitData)
+          ElMessage.success('活动添加成功')
         }
-        activitiesList.value.push(newActivity)
-        ElMessage.success('活动添加成功')
+        
+        dialogVisible.value = false
+        loadActivities()
+      } catch (error) {
+        console.error('操作失败:', error)
+      } finally {
+        loading.value = false
       }
-      dialogVisible.value = false
     }
   })
 }
 
-const handleViewDetail = (row) => {
-  currentActivity.value = row
-  detailVisible.value = true
+const handleViewDetail = async (row) => {
+  try {
+    loading.value = true
+    const res = await getActivityById(row.id)
+    currentActivity.value = {
+      ...res.data,
+      time: formatDateTime(res.data.activityTime),
+      venue: res.data.areaName || res.data.venueName || '待定',
+      participants: res.data.currentParticipants,
+      creator: res.data.creatorName || '未知'
+    }
+    detailVisible.value = true
+  } catch (error) {
+    console.error('加载活动详情失败:', error)
+    ElMessage.error('加载活动详情失败')
+  } finally {
+    loading.value = false
+  }
 }
 
 const handleDelete = (row) => {
@@ -511,11 +656,16 @@ const handleDelete = (row) => {
       cancelButtonText: '取消',
       type: 'warning'
     }
-  ).then(() => {
-    const index = activitiesList.value.findIndex(v => v.id === row.id)
-    if (index !== -1) {
-      activitiesList.value.splice(index, 1)
+  ).then(async () => {
+    try {
+      loading.value = true
+      await deleteActivity(row.id)
       ElMessage.success('活动删除成功')
+      loadActivities()
+    } catch (error) {
+      console.error('删除失败:', error)
+    } finally {
+      loading.value = false
     }
   }).catch(() => {})
 }
@@ -524,10 +674,12 @@ const handleDelete = (row) => {
 const handleSizeChange = (val) => {
   pageSize.value = val
   currentPage.value = 1
+  loadActivities()
 }
 
 const handleCurrentChange = (val) => {
   currentPage.value = val
+  loadActivities()
 }
 
 // 图片上传前的校验
