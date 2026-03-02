@@ -98,7 +98,7 @@
         v-model:current-page="currentPage"
         v-model:page-size="pageSize"
         :page-sizes="[5, 10, 20, 50]"
-        :total="filteredApplications.length"
+        :total="total"
         layout="total, sizes, prev, pager, next, jumper"
         style="margin-top: 20px; justify-content: flex-end"
         @size-change="handleSizeChange"
@@ -179,7 +179,7 @@
             <el-col :span="12">
               <div class="detail-item">
                 <span class="label">活动场地：</span>
-                <span class="value">{{ currentApplication.venue }}{{ currentApplication.area ? ` - ${currentApplication.area}` : '' }}</span>
+                <span class="value">{{ currentApplication.venue }}</span>
               </div>
             </el-col>
             <el-col :span="12">
@@ -214,7 +214,9 @@
         <!-- 活动须知 -->
         <div class="detail-section" v-if="currentApplication.notice">
           <h3 class="section-title">活动须知</h3>
-          <p class="description-text">{{ currentApplication.notice }}</p>
+          <ul class="notice-list">
+            <li v-for="(item, index) in currentApplication.notice.split('\n')" :key="index">{{ item }}</li>
+          </ul>
         </div>
 
         <!-- 拒绝原因 -->
@@ -257,9 +259,10 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
+import { getActivityPage, approveActivity, deleteActivity, getActivityById } from '@/api/activity'
 
 const searchKeyword = ref('')
 const filterStatus = ref('')
@@ -270,10 +273,12 @@ const rejectVisible = ref(false)
 const currentApplication = ref(null)
 const rejectingApplication = ref(null)
 const rejectFormRef = ref(null)
+const loading = ref(false)
 
 // 分页相关
 const currentPage = ref(1)
 const pageSize = ref(10)
+const total = ref(0)
 
 const rejectForm = ref({
   reason: ''
@@ -283,99 +288,59 @@ const rejectRules = {
   reason: [{ required: true, message: '请输入拒绝原因', trigger: 'blur' }]
 }
 
-const applications = ref([
-  {
-    id: 1,
-    applicant: '张三',
-    contact: '13800138001',
-    email: 'zhangsan@example.com',
-    studentId: '2021001',
-    title: '班级篮球友谊赛',
-    category: 'basketball',
-    time: '2026-03-05 14:00',
-    venue: '篮球馆',
-    area: 'A场',
-    maxParticipants: 20,
-    image: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=400',
-    description: '组织班级篮球友谊赛，增进同学之间的友谊',
-    notice: '请提前15分钟到达，自备运动装备',
-    status: 'pending',
-    applyTime: '2026-03-01 10:30'
-  },
-  {
-    id: 2,
-    applicant: '李四',
-    contact: '13800138002',
-    email: 'lisi@example.com',
-    studentId: '2021002',
-    title: '羽毛球训练营',
-    category: 'badminton',
-    time: '2026-03-06 16:00',
-    venue: '羽毛球馆',
-    area: '1号场地',
-    maxParticipants: 16,
-    image: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=400',
-    description: '羽毛球爱好者训练营，提高技术水平',
-    notice: '请自备球拍和运动鞋',
-    status: 'approved',
-    applyTime: '2026-02-28 15:20'
-  },
-  {
-    id: 3,
-    applicant: '王五',
-    contact: '13800138003',
-    email: 'wangwu@example.com',
-    studentId: '2021003',
-    title: '网球双打赛',
-    category: 'tennis',
-    time: '2026-03-07 09:00',
-    venue: '网球场',
-    area: '1号场地',
-    maxParticipants: 8,
-    image: 'https://images.unsplash.com/photo-1622279457486-62dcc4a431d6?w=400',
-    description: '网球双打比赛，欢迎网球爱好者参加',
-    notice: '请自备球拍，场地提供网球',
-    status: 'pending',
-    applyTime: '2026-03-01 11:00'
-  },
-  {
-    id: 4,
-    applicant: '赵六',
-    contact: '13800138004',
-    email: 'zhaoliu@example.com',
-    studentId: '2021004',
-    title: '乒乓球比赛',
-    category: 'tabletennis',
-    time: '2026-03-08 14:00',
-    venue: '乒乓球室',
-    area: '全场',
-    maxParticipants: 12,
-    image: 'https://images.unsplash.com/photo-1609710228159-0fa9bd7c0827?w=400',
-    description: '乒乓球友谊赛，切磋球技',
-    notice: '请自备球拍',
-    status: 'rejected',
-    applyTime: '2026-03-01 09:00',
-    rejectReason: '该时段场地已被预约，建议更换时间'
-  },
-  {
-    id: 5,
-    applicant: '孙七',
-    contact: '13800138005',
-    email: 'sunqi@example.com',
-    studentId: '2021005',
-    title: '台球比赛',
-    category: 'other',
-    time: '2026-03-09 19:00',
-    venue: '台球室',
-    area: '全场',
-    maxParticipants: 10,
-    image: 'https://images.unsplash.com/photo-1604147706283-d7119b5b822c?w=400',
-    description: '台球爱好者交流赛',
-    notice: '场地提供球杆和台球',
-    status: 'pending',
-    applyTime: '2026-03-01 13:30'
+const applications = ref([])
+
+// 加载活动申请列表（只显示私人活动的审核申请）
+const loadApplications = async () => {
+  try {
+    loading.value = true
+    const params = {
+      pageNum: currentPage.value,
+      pageSize: pageSize.value,
+      keyword: searchKeyword.value || undefined,
+      approvalStatus: filterStatus.value || undefined,
+      activityType: 'private' // 只查询私人活动
+    }
+    const res = await getActivityPage(params)
+    
+    // 转换数据格式
+    applications.value = res.data.records.map(item => ({
+      ...item,
+      applicant: item.creatorName || '未知',
+      contact: item.creatorPhone || '-',
+      email: item.creatorEmail || '-',
+      studentId: item.creatorStudentId || '-',
+      time: formatDateTime(item.activityTime),
+      venue: item.areaName || item.venueName || '待定',
+      applyTime: formatDateTime(item.createTime),
+      status: item.approvalStatus // pending, approved, rejected
+    }))
+    
+    total.value = res.data.total
+  } catch (error) {
+    console.error('加载活动申请列表失败:', error)
+    ElMessage.error('加载活动申请列表失败')
+  } finally {
+    loading.value = false
   }
-])
+}
+
+// 格式化日期时间
+const formatDateTime = (dateTimeStr) => {
+  if (!dateTimeStr) return ''
+  const date = new Date(dateTimeStr)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  return `${year}-${month}-${day} ${hours}:${minutes}`
+}
+
+// 初始化加载
+onMounted(() => {
+  loadApplications()
+})
 
 const filteredApplications = computed(() => {
   return applications.value.filter(app => {
@@ -391,9 +356,7 @@ const filteredApplications = computed(() => {
 
 // 分页后的数据
 const paginatedApplications = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value
-  const end = start + pageSize.value
-  return filteredApplications.value.slice(start, end)
+  return filteredApplications.value
 })
 
 const categoryMap = {
@@ -450,10 +413,18 @@ const handleApprove = (row) => {
       cancelButtonText: '取消',
       type: 'success'
     }
-  ).then(() => {
-    row.status = 'approved'
-    ElMessage.success('申请已通过')
-    detailVisible.value = false
+  ).then(async () => {
+    try {
+      loading.value = true
+      await approveActivity(row.id, true)
+      ElMessage.success('申请已通过')
+      detailVisible.value = false
+      loadApplications()
+    } catch (error) {
+      console.error('审核失败:', error)
+    } finally {
+      loading.value = false
+    }
   }).catch(() => {})
 }
 
@@ -466,20 +437,46 @@ const handleReject = (row) => {
 const confirmReject = async () => {
   if (!rejectFormRef.value) return
   
-  await rejectFormRef.value.validate((valid) => {
+  await rejectFormRef.value.validate(async (valid) => {
     if (valid) {
-      rejectingApplication.value.status = 'rejected'
-      rejectingApplication.value.rejectReason = rejectForm.value.reason
-      rejectVisible.value = false
-      detailVisible.value = false
-      ElMessage.success('申请已拒绝')
+      try {
+        loading.value = true
+        await approveActivity(rejectingApplication.value.id, false)
+        rejectVisible.value = false
+        detailVisible.value = false
+        ElMessage.success('申请已拒绝')
+        loadApplications()
+      } catch (error) {
+        console.error('审核失败:', error)
+      } finally {
+        loading.value = false
+      }
     }
   })
 }
 
-const handleViewDetail = (row) => {
-  currentApplication.value = row
-  detailVisible.value = true
+const handleViewDetail = async (row) => {
+  try {
+    loading.value = true
+    const res = await getActivityById(row.id)
+    currentApplication.value = {
+      ...res.data,
+      applicant: res.data.creatorName || '未知',
+      contact: res.data.creatorPhone || '-',
+      email: res.data.creatorEmail || '-',
+      studentId: res.data.creatorStudentId || '-',
+      time: formatDateTime(res.data.activityTime),
+      venue: res.data.areaName || res.data.venueName || '待定',
+      applyTime: formatDateTime(res.data.createTime),
+      status: res.data.approvalStatus
+    }
+    detailVisible.value = true
+  } catch (error) {
+    console.error('加载活动详情失败:', error)
+    ElMessage.error('加载活动详情失败')
+  } finally {
+    loading.value = false
+  }
 }
 
 const handleDelete = (row) => {
@@ -491,14 +488,19 @@ const handleDelete = (row) => {
       cancelButtonText: '取消',
       type: 'warning'
     }
-  ).then(() => {
-    const index = applications.value.findIndex(item => item.id === row.id)
-    if (index !== -1) {
-      applications.value.splice(index, 1)
+  ).then(async () => {
+    try {
+      loading.value = true
+      await deleteActivity(row.id)
       ElMessage.success('记录删除成功')
       if (currentApplication.value?.id === row.id) {
         detailVisible.value = false
       }
+      loadApplications()
+    } catch (error) {
+      console.error('删除失败:', error)
+    } finally {
+      loading.value = false
     }
   }).catch(() => {})
 }
@@ -507,10 +509,12 @@ const handleDelete = (row) => {
 const handleSizeChange = (val) => {
   pageSize.value = val
   currentPage.value = 1
+  loadApplications()
 }
 
 const handleCurrentChange = (val) => {
   currentPage.value = val
+  loadApplications()
 }
 </script>
 

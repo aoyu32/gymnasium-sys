@@ -486,12 +486,16 @@ const loadVenues = async () => {
       status: filterStatus.value || undefined
     }
     const res = await getVenuePage(params)
+    console.log('场地列表数据:', res.data.records)
     venues.value = res.data.records.map(venue => ({
       ...venue,
       // 解析images JSON字符串
       image: venue.images ? JSON.parse(venue.images)[0] : '',
-      images: venue.images ? JSON.parse(venue.images) : []
+      images: venue.images ? JSON.parse(venue.images) : [],
+      // 确保areas字段存在
+      areas: venue.areas || []
     }))
+    console.log('处理后的场地数据:', venues.value)
     total.value = res.data.total
   } catch (error) {
     console.error('加载场地列表失败:', error)
