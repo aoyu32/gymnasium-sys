@@ -25,13 +25,6 @@
     <!-- 筛选区域 -->
     <div class="filter-section">
       <el-form :inline="true" :model="filterForm" class="filter-form">
-        <el-form-item label="活动状态">
-          <el-select v-model="filterForm.status" placeholder="全部状态" clearable style="width: 140px">
-            <el-option label="报名中" value="open" />
-            <el-option label="已满员" value="full" />
-            <el-option label="已结束" value="closed" />
-          </el-select>
-        </el-form-item>
         <el-form-item label="活动日期">
           <el-date-picker
             v-model="filterForm.dateRange"
@@ -43,34 +36,26 @@
             style="width: 340px"
           />
         </el-form-item>
-        <el-form-item label="人数范围">
-          <div class="participants-range">
-            <el-input-number
-              v-model="filterForm.minParticipants"
-              :min="0"
-              :max="100"
-              placeholder="最少人数"
-              controls-position="right"
-              style="width: 130px"
-            />
-            <span class="range-separator">-</span>
-            <el-input-number
-              v-model="filterForm.maxParticipants"
-              :min="0"
-              :max="100"
-              placeholder="最多人数"
-              controls-position="right"
-              style="width: 130px"
-            />
-          </div>
-        </el-form-item>
         <el-form-item label="活动类型">
           <el-select v-model="filterForm.activityType" placeholder="全部类型" clearable style="width: 140px">
             <el-option label="公共活动" value="public" />
             <el-option label="私人活动" value="private" />
           </el-select>
         </el-form-item>
+        <el-form-item label="活动标签">
+          <el-select v-model="filterForm.tag" placeholder="全部标签" clearable style="width: 140px">
+            <el-option label="热门活动" value="hot" />
+            <el-option label="新活动" value="new" />
+          </el-select>
+        </el-form-item>
         <el-form-item class="reset-btn-item">
+          <el-button 
+            :type="showMyActivities ? 'primary' : ''"
+            @click="handleToggleMyActivities"
+          >
+            <el-icon><User /></el-icon>
+            我的活动
+          </el-button>
           <el-button @click="handleReset">
             <el-icon><RefreshLeft /></el-icon>
             重置
@@ -85,6 +70,8 @@
         v-for="item in activities"
         :key="item.id"
         :activity="item"
+        @edit="handleEditActivity"
+        @cancel="handleCancelActivity"
       />
     </div>
 
@@ -137,14 +124,14 @@
             <el-option label="其他" value="other" />
           </el-select>
         </el-form-item>
-        <el-form-item label="活动时间" prop="time">
+        <el-form-item label="活动时间" prop="activityTime">
           <el-date-picker
-            v-model="createForm.time"
+            v-model="createForm.activityTime"
             type="datetime"
             placeholder="选择活动时间"
             style="width: 100%"
             format="YYYY-MM-DD HH:mm"
-            value-format="YYYY-MM-DD HH:mm"
+            value-format="YYYY-MM-DDTHH:mm:ss"
             :disabled-date="disabledDate"
           />
         </el-form-item>
@@ -203,11 +190,109 @@
         <el-button type="primary" @click="handleCreateActivity">创建活动</el-button>
       </template>
     </el-dialog>
+
+    <!-- 编辑活动对话框 -->
+    <el-dialog
+      v-model="showEditDialog"
+      title="修改活动信息"
+      width="700px"
+      :close-on-click-modal="false"
+    >
+      <el-form
+        ref="editFormRef"
+        :model="editForm"
+        :rules="createRules"
+        label-width="100px"
+      >
+        <el-form-item label="活动名称" prop="title">
+          <el-input v-model="editForm.title" placeholder="请输入活动名称" maxlength="50" show-word-limit />
+        </el-form-item>
+        <el-form-item label="活动分类" prop="category">
+          <el-select v-model="editForm.category" placeholder="请选择活动分类" style="width: 100%">
+            <el-option label="篮球" value="basketball" />
+            <el-option label="足球" value="football" />
+            <el-option label="羽毛球" value="badminton" />
+            <el-option label="乒乓球" value="tabletennis" />
+            <el-option label="网球" value="tennis" />
+            <el-option label="排球" value="volleyball" />
+            <el-option label="游泳" value="swimming" />
+            <el-option label="健身" value="fitness" />
+            <el-option label="跑步" value="running" />
+            <el-option label="武术" value="martialarts" />
+            <el-option label="其他" value="other" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="活动时间" prop="activityTime">
+          <el-date-picker
+            v-model="editForm.activityTime"
+            type="datetime"
+            placeholder="选择活动时间"
+            style="width: 100%"
+            format="YYYY-MM-DD HH:mm"
+            value-format="YYYY-MM-DDTHH:mm:ss"
+            :disabled-date="disabledDate"
+          />
+        </el-form-item>
+        <el-form-item label="活动地点" prop="venue">
+          <el-input v-model="editForm.venue" placeholder="请输入活动地点" />
+        </el-form-item>
+        <el-form-item label="最大人数" prop="maxParticipants">
+          <el-input-number
+            v-model="editForm.maxParticipants"
+            :min="2"
+            :max="50"
+            style="width: 100%"
+          />
+          <div class="form-tip">包含您自己在内的总人数</div>
+        </el-form-item>
+        <el-form-item label="宣传图片" prop="image">
+          <el-upload
+            class="image-uploader"
+            :show-file-list="false"
+            :before-upload="beforeImageUpload"
+            :http-request="handleEditImageUpload"
+            accept="image/*"
+          >
+            <img v-if="editForm.imageUrl" :src="editForm.imageUrl" class="uploaded-image" />
+            <div v-else class="upload-placeholder">
+              <el-icon class="upload-icon"><Plus /></el-icon>
+              <div class="upload-text">点击上传活动宣传图</div>
+              <div class="upload-tip">支持 JPG、PNG 格式，建议尺寸 800x600</div>
+            </div>
+          </el-upload>
+        </el-form-item>
+        <el-form-item label="活动详情" prop="description">
+          <el-input
+            v-model="editForm.description"
+            type="textarea"
+            :rows="5"
+            placeholder="请详细描述活动内容、要求、注意事项等信息"
+            maxlength="500"
+            show-word-limit
+          />
+        </el-form-item>
+        <el-form-item label="活动须知" prop="notice">
+          <el-input
+            v-model="editForm.notice"
+            type="textarea"
+            :rows="4"
+            placeholder="请填写参加活动的注意事项，每行一条（选填）"
+            maxlength="300"
+            show-word-limit
+          />
+          <div class="form-tip">每行一条须知，将在活动详情页展示</div>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showEditDialog = false">取消</el-button>
+        <el-button type="primary" @click="handleUpdateActivity">保存修改</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Basketball,
@@ -219,12 +304,14 @@ import {
   Trophy,
   Timer,
   Bicycle,
-  Plus
+  Plus,
+  User
 } from '@element-plus/icons-vue'
 import ActivityCard from '@/components/activity-card/index.vue'
-import { activities as mockActivities } from '@/mock/activities'
+import { getActivityPage, createActivity, getMyActivities, updateActivity, deleteActivity } from '@/api/activity'
 
 const activeCategory = ref('all')
+const loading = ref(false)
 
 const categories = ref([
   { label: '全部活动', value: 'all', icon: 'Sunny' },
@@ -242,83 +329,96 @@ const categories = ref([
 ])
 
 const filterForm = ref({
-  status: '',
+  tag: '',
   dateRange: [],
-  minParticipants: null,
-  maxParticipants: null,
   activityType: ''
 })
 
 const currentPage = ref(1)
 const pageSize = ref(12)
+const total = ref(0)
+const activities = ref([])
+const showMyActivities = ref(false) // 是否显示我的活动
 
-// 筛选后的活动列表
-const filteredActivities = computed(() => {
-  let result = [...mockActivities]
-  
-  // 按分类筛选
-  if (activeCategory.value !== 'all') {
-    result = result.filter(item => item.category === activeCategory.value)
-  }
-  
-  // 按活动状态筛选
-  if (filterForm.value.status) {
-    result = result.filter(item => {
-      const activityDate = new Date(item.time)
-      const now = new Date()
-      
-      if (filterForm.value.status === 'open') {
-        // 报名中：未满员且未结束
-        return item.participants < item.maxParticipants && activityDate >= now
-      } else if (filterForm.value.status === 'full') {
-        // 已满员：参与人数达到上限
-        return item.participants >= item.maxParticipants && activityDate >= now
-      } else if (filterForm.value.status === 'closed') {
-        // 已结束：活动时间已过
-        return activityDate < now
+// 加载活动列表
+const loadActivities = async () => {
+  try {
+    loading.value = true
+    
+    let res
+    if (showMyActivities.value) {
+      // 查询我的活动
+      const params = {
+        pageNum: currentPage.value,
+        pageSize: pageSize.value,
+        status: filterForm.value.status || undefined,
+        activityType: filterForm.value.activityType || undefined,
+        tag: filterForm.value.tag || undefined
       }
-      return true
-    })
+      res = await getMyActivities(params)
+    } else {
+      // 查询所有活动
+      const params = {
+        pageNum: currentPage.value,
+        pageSize: pageSize.value,
+        category: activeCategory.value !== 'all' ? activeCategory.value : undefined,
+        activityType: filterForm.value.activityType || undefined,
+        tag: filterForm.value.tag || undefined
+      }
+      res = await getActivityPage(params)
+    }
+    
+    // 转换数据格式以匹配ActivityCard组件
+    let filteredActivities = res.data.records.map(item => ({
+      ...item,
+      time: formatDateTime(item.activityTime),
+      venue: item.venueName || item.areaName || '待定',
+      participants: item.currentParticipants,
+      statusText: item.tag === 'hot' ? '热门' : item.tag === 'new' ? '新活动' : '',
+      activityTimeRaw: new Date(item.activityTime), // 保留原始时间用于筛选
+      isMyActivity: showMyActivities.value // 标记是否是我的活动
+    }))
+    
+    // 日期范围
+    if (filterForm.value.dateRange && filterForm.value.dateRange.length === 2) {
+      const [startDate, endDate] = filterForm.value.dateRange
+      filteredActivities = filteredActivities.filter(item => {
+        const activityDate = item.activityTimeRaw
+        return activityDate >= startDate && activityDate <= endDate
+      })
+    }
+    
+    activities.value = filteredActivities
+    total.value = filteredActivities.length
+  } catch (error) {
+    console.error('加载活动列表失败:', error)
+    ElMessage.error('加载活动列表失败')
+  } finally {
+    loading.value = false
   }
-  
-  // 按日期范围筛选
-  if (filterForm.value.dateRange && filterForm.value.dateRange.length === 2) {
-    const [startDate, endDate] = filterForm.value.dateRange
-    result = result.filter(item => {
-      const activityDate = new Date(item.time)
-      return activityDate >= startDate && activityDate <= endDate
-    })
-  }
-  
-  // 按人数范围筛选
-  if (filterForm.value.minParticipants !== null && filterForm.value.minParticipants > 0) {
-    result = result.filter(item => item.maxParticipants >= filterForm.value.minParticipants)
-  }
-  if (filterForm.value.maxParticipants !== null && filterForm.value.maxParticipants > 0) {
-    result = result.filter(item => item.maxParticipants <= filterForm.value.maxParticipants)
-  }
-  
-  // 按活动类型筛选
-  if (filterForm.value.activityType) {
-    result = result.filter(item => item.activityType === filterForm.value.activityType)
-  }
-  
-  return result
+}
+
+// 格式化日期时间
+const formatDateTime = (dateTimeStr) => {
+  if (!dateTimeStr) return ''
+  const date = new Date(dateTimeStr)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  return `${year}-${month}-${day} ${hours}:${minutes}`
+}
+
+// 初始化加载
+onMounted(() => {
+  loadActivities()
 })
 
-// 总数
-const total = computed(() => filteredActivities.value.length)
-
-// 当前页显示的活动
-const activities = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value
-  const end = start + pageSize.value
-  return filteredActivities.value.slice(start, end)
-})
-
-// 监听筛选条件变化，重置到第一页
+// 监听筛选条件变化
 watch([activeCategory, filterForm], () => {
   currentPage.value = 1
+  loadActivities()
 }, { deep: true })
 
 const handleCategoryChange = (category) => {
@@ -329,19 +429,33 @@ const handleCategoryChange = (category) => {
 
 const handleReset = () => {
   filterForm.value = {
-    status: '',
+    tag: '',
     dateRange: [],
-    minParticipants: null,
-    maxParticipants: null,
     activityType: ''
   }
   activeCategory.value = 'all'
+  currentPage.value = 1
+  showMyActivities.value = false
+  loadActivities()
   ElMessage.info('已重置筛选条件')
+}
+
+// 显示我的活动（切换状态）
+const handleToggleMyActivities = () => {
+  showMyActivities.value = !showMyActivities.value
+  currentPage.value = 1
+  loadActivities()
+  
+  if (showMyActivities.value) {
+    ElMessage.success('正在查看我的活动')
+  } else {
+    ElMessage.info('已切换到活动中心')
+  }
 }
 
 const handlePageChange = (page) => {
   currentPage.value = page
-  // 滚动到顶部
+  loadActivities()
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
@@ -349,10 +463,15 @@ const handlePageChange = (page) => {
 const showCreateDialog = ref(false)
 const createFormRef = ref(null)
 
+// 编辑活动
+const showEditDialog = ref(false)
+const editFormRef = ref(null)
+const editingActivityId = ref(null)
+
 const createForm = ref({
   title: '',
   category: '',
-  time: '',
+  activityTime: '',
   venue: '',
   maxParticipants: 10,
   description: '',
@@ -360,10 +479,21 @@ const createForm = ref({
   notice: ''
 })
 
+const editForm = ref({
+  title: '',
+  category: '',
+  activityTime: '',
+  venue: '',
+  maxParticipants: 10,
+  description: '',
+  notice: '',
+  imageUrl: ''
+})
+
 const createRules = {
   title: [{ required: true, message: '请输入活动名称', trigger: 'blur' }],
   category: [{ required: true, message: '请选择活动分类', trigger: 'change' }],
-  time: [{ required: true, message: '请选择活动时间', trigger: 'change' }],
+  activityTime: [{ required: true, message: '请选择活动时间', trigger: 'change' }],
   venue: [{ required: true, message: '请输入活动地点', trigger: 'blur' }],
   maxParticipants: [{ required: true, message: '请输入最大人数', trigger: 'blur' }],
   description: [{ required: true, message: '请输入活动详情', trigger: 'blur' }]
@@ -391,7 +521,6 @@ const beforeImageUpload = (file) => {
 
 const handleImageUpload = (options) => {
   const { file } = options
-  // 这里使用本地预览，实际项目中应该上传到服务器
   const reader = new FileReader()
   reader.onload = (e) => {
     createForm.value.imageUrl = e.target.result
@@ -401,30 +530,133 @@ const handleImageUpload = (options) => {
   return Promise.resolve()
 }
 
+const handleEditImageUpload = (options) => {
+  const { file } = options
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    editForm.value.imageUrl = e.target.result
+    ElMessage.success('图片上传成功')
+  }
+  reader.readAsDataURL(file)
+  return Promise.resolve()
+}
+
 const handleCreateActivity = async () => {
   if (!createFormRef.value) return
   
-  await createFormRef.value.validate((valid) => {
+  await createFormRef.value.validate(async (valid) => {
     if (valid) {
-      if (!createForm.value.imageUrl) {
-        ElMessage.warning('请上传活动宣传图片')
-        return
+      try {
+        loading.value = true
+        const submitData = {
+          title: createForm.value.title,
+          category: createForm.value.category,
+          activityType: 'private', // 学生创建的是私有活动
+          activityTime: createForm.value.activityTime,
+          areaName: createForm.value.venue,
+          maxParticipants: createForm.value.maxParticipants,
+          description: createForm.value.description,
+          notice: createForm.value.notice,
+          image: createForm.value.imageUrl
+        }
+        await createActivity(submitData)
+        ElMessage.success('活动创建成功，等待审核')
+        showCreateDialog.value = false
+        createForm.value = {
+          title: '',
+          category: '',
+          activityTime: '',
+          venue: '',
+          maxParticipants: 10,
+          description: '',
+          imageUrl: '',
+          notice: ''
+        }
+        // 重新加载列表
+        loadActivities()
+      } catch (error) {
+        console.error('创建活动失败:', error)
+      } finally {
+        loading.value = false
       }
-      ElMessage.success('活动创建成功，等待审核')
-      showCreateDialog.value = false
-      createForm.value = {
-        title: '',
-        category: '',
-        time: '',
-        venue: '',
-        maxParticipants: 10,
-        description: '',
-        imageUrl: '',
-        notice: ''
-      }
-      // 这里后期对接API
     }
   })
+}
+
+// 编辑活动
+const handleEditActivity = (activity) => {
+  editingActivityId.value = activity.id
+  editForm.value = {
+    title: activity.title,
+    category: activity.category,
+    activityTime: activity.activityTime,
+    venue: activity.areaName || activity.venueName || '',
+    maxParticipants: activity.maxParticipants,
+    description: activity.description,
+    notice: activity.notice || '',
+    imageUrl: activity.image || ''
+  }
+  showEditDialog.value = true
+}
+
+// 保存修改
+const handleUpdateActivity = async () => {
+  if (!editFormRef.value) return
+  
+  await editFormRef.value.validate(async (valid) => {
+    if (valid) {
+      try {
+        loading.value = true
+        const submitData = {
+          title: editForm.value.title,
+          category: editForm.value.category,
+          activityType: 'private',
+          activityTime: editForm.value.activityTime,
+          areaName: editForm.value.venue,
+          maxParticipants: editForm.value.maxParticipants,
+          description: editForm.value.description,
+          notice: editForm.value.notice,
+          image: editForm.value.imageUrl
+        }
+        await updateActivity(editingActivityId.value, submitData)
+        ElMessage.success('活动修改成功')
+        showEditDialog.value = false
+        // 重新加载列表
+        loadActivities()
+      } catch (error) {
+        console.error('修改活动失败:', error)
+      } finally {
+        loading.value = false
+      }
+    }
+  })
+}
+
+// 取消活动
+const handleCancelActivity = async (activity) => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要取消活动"${activity.title}"吗？取消后将无法恢复。`,
+      '取消活动',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+    
+    loading.value = true
+    await deleteActivity(activity.id)
+    ElMessage.success('活动已取消')
+    // 重新加载列表
+    loadActivities()
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('取消活动失败:', error)
+    }
+  } finally {
+    loading.value = false
+  }
 }
 </script>
 

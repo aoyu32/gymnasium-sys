@@ -54,14 +54,10 @@
         </div>
 
         <!-- 活动须知 -->
-        <div class="info-card">
+        <div v-if="activity.notice" class="info-card">
           <h2>活动须知</h2>
           <ul class="notice-list">
-            <li>请提前15分钟到达活动场地</li>
-            <li>请穿着运动服装和运动鞋</li>
-            <li>请自备水杯，注意补充水分</li>
-            <li>如有身体不适，请及时告知组织者</li>
-            <li>请遵守场地规则，爱护公共设施</li>
+            <li v-for="(item, index) in noticeList" :key="index">{{ item }}</li>
           </ul>
         </div>
       </div>
@@ -113,7 +109,7 @@
                 v-model="applyForm.reason"
                 type="textarea"
                 :rows="4"
-                placeholder="请简要说明参加活动的理由"
+                placeholder="请简要说明参加活动的理由（选填）"
               />
             </el-form-item>
             <el-form-item>
@@ -122,6 +118,7 @@
                 size="large"
                 style="width: 100%"
                 :disabled="!canApply"
+                :loading="loading"
                 @click="handleSubmit"
               >
                 {{ getButtonText }}
@@ -131,13 +128,22 @@
 
           <!-- 温馨提示 -->
           <el-alert
-            v-if="canApply"
+            v-if="canApply && activity.activityType === 'private'"
             title="温馨提示"
             type="info"
             :closable="false"
             show-icon
           >
-            <p>提交申请后，请等待审核通过。审核结果将通过短信或邮件通知您。</p>
+            <p>这是私人活动，提交申请后需要等待创建者审核通过。</p>
+          </el-alert>
+          <el-alert
+            v-else-if="canApply"
+            title="温馨提示"
+            type="success"
+            :closable="false"
+            show-icon
+          >
+            <p>这是公开活动，提交申请后即可参加。</p>
           </el-alert>
         </div>
       </div>
@@ -157,7 +163,8 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Clock, Location, User } from '@element-plus/icons-vue'
-import { activities } from '@/mock/activities'
+import { getActivityById, registerActivity } from '@/api/activity'
+import { getCurrentStudentInfo } from '@/api/student'
 
 const route = useRoute()
 const router = useRouter()
@@ -165,11 +172,79 @@ const formRef = ref(null)
 
 // 获取活动详情
 const activity = ref(null)
+const loading = ref(false)
 
-onMounted(() => {
-  const id = parseInt(route.params.id)
-  activity.value = activities.find(item => item.id === id)
+onMounted(async () => {
+  await loadActivityDetail()
+  await loadStudentInfo()
 })
+
+// 加载活动详情
+const loadActivityDetail = async () => {
+  try {
+    loading.value = true
+    const id = parseInt(route.params.id)
+    const res = await getActivityById(id)
+    
+    // 转换数据格式
+    activity.value = {
+      ...res.data,
+      time: formatDateTime(res.data.activityTime),
+      venue: res.data.venueName || res.data.areaName || '待定',
+      area: res.data.areaName,
+      participants: res.data.currentParticipants,
+      maxParticipants: res.data.maxParticipants,
+      creator: res.data.creatorName,
+      statusText: res.data.tag === 'hot' ? '热门' : res.data.tag === 'new' ? '新活动' : ''
+    }
+  } catch (error) {
+    console.error('加载活动详情失败:', error)
+    ElMessage.error('加载活动详情失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+// 加载学生信息并自动填充表单
+const loadStudentInfo = async () => {
+  try {
+    const res = await getCurrentStudentInfo()
+    if (res.data) {
+      // 定义有效的学院列表
+      const validColleges = [
+        '计算机学院', '软件学院', '信息学院', '电子工程学院', '机械工程学院',
+        '材料科学学院', '化学化工学院', '生命科学学院', '数学学院', '物理学院',
+        '经济管理学院', '外国语学院', '人文学院', '艺术学院', '体育学院'
+      ]
+      
+      // 自动填充表单
+      applyForm.value.name = res.data.name || ''
+      applyForm.value.phone = res.data.phone || ''
+      applyForm.value.email = res.data.email || ''
+      applyForm.value.studentId = res.data.studentId || ''
+      
+      // 只有当college值在有效列表中时才自动填充
+      if (res.data.college && validColleges.includes(res.data.college)) {
+        applyForm.value.college = res.data.college
+      }
+    }
+  } catch (error) {
+    console.error('加载学生信息失败:', error)
+    // 加载失败不影响用户手动填写，不显示错误提示
+  }
+}
+
+// 格式化日期时间
+const formatDateTime = (dateTimeStr) => {
+  if (!dateTimeStr) return ''
+  const date = new Date(dateTimeStr)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  return `${year}-${month}-${day} ${hours}:${minutes}`
+}
 
 // 分类标签映射
 const categoryMap = {
@@ -192,41 +267,53 @@ const getCategoryLabel = computed(() => {
 
 // 活动详情描述
 const activityDescription = computed(() => {
-  const descriptions = {
-    basketball: '本次篮球活动旨在促进同学们之间的交流与合作，提高篮球技能。无论你是篮球高手还是初学者，都欢迎参加。我们将进行友谊赛和技巧训练，让每个人都能享受篮球的乐趣。',
-    football: '足球是一项充满激情的运动，本次活动将组织友谊赛和基础训练。欢迎所有热爱足球的同学参加，一起在绿茵场上挥洒汗水，感受团队合作的魅力。',
-    badminton: '羽毛球是一项老少皆宜的运动，本次活动将提供专业教练指导，帮助大家提高技术水平。无论是单打还是双打，都能找到适合自己的训练方式。',
-    tabletennis: '乒乓球作为国球，深受大家喜爱。本次活动将举办比赛和训练，让大家在切磋中提高球技，在交流中增进友谊。',
-    tennis: '网球是一项优雅的运动，本次活动将提供专业场地和器材，欢迎网球爱好者参加。我们将进行技术指导和友谊赛，让大家享受网球的乐趣。',
-    volleyball: '排球是一项团队运动，强调配合与默契。本次活动将组织训练和比赛，让大家在运动中增强体质，培养团队精神。',
-    swimming: '游泳是一项全身运动，对身体健康非常有益。本次活动将提供专业教练指导，帮助大家掌握正确的游泳技巧，提高游泳水平。',
-    fitness: '健身活动将提供专业的器械和指导，帮助大家科学锻炼，塑造健康体魄。无论是增肌还是减脂，都能找到适合自己的训练方案。',
-    running: '跑步是最简单有效的运动方式，本次活动将组织集体晨跑，让大家在清晨的阳光下开启活力的一天，享受运动的快乐。',
-    martialarts: '武术是中华传统文化的瑰宝，本次活动将教授基本功和套路，让大家感受武术的魅力，强身健体，修身养性。',
-    other: '本次活动将为大家提供一个交流和锻炼的平台，欢迎所有热爱运动的同学参加，一起享受运动的乐趣。'
-  }
-  return descriptions[activity.value?.category] || descriptions.other
+  return activity.value?.description || '暂无活动详情'
+})
+
+// 活动须知列表
+const noticeList = computed(() => {
+  if (!activity.value?.notice) return []
+  return activity.value.notice.split('\n').filter(item => item.trim())
 })
 
 // 活动状态
 const getStatusTagType = computed(() => {
   if (!activity.value) return 'info'
-  const activityDate = new Date(activity.value.time)
-  const now = new Date()
   
-  if (activityDate < now) return 'info'
-  if (activity.value.participants >= activity.value.maxParticipants) return 'warning'
-  return 'success'
+  // 根据活动状态返回标签类型
+  switch (activity.value.status) {
+    case 'open':
+      return 'success'
+    case 'ongoing':
+      return 'warning'
+    case 'closed':
+      return 'info'
+    case 'cancelled':
+      return 'danger'
+    default:
+      return 'info'
+  }
 })
 
 const getStatusText = computed(() => {
   if (!activity.value) return ''
-  const activityDate = new Date(activity.value.time)
-  const now = new Date()
   
-  if (activityDate < now) return '已结束'
-  if (activity.value.participants >= activity.value.maxParticipants) return '已满员'
-  return '报名中'
+  // 根据活动状态返回文本
+  switch (activity.value.status) {
+    case 'open':
+      if (activity.value.participants >= activity.value.maxParticipants) {
+        return '已满员'
+      }
+      return '报名中'
+    case 'ongoing':
+      return '进行中'
+    case 'closed':
+      return '已结束'
+    case 'cancelled':
+      return '已取消'
+    default:
+      return '未知状态'
+  }
 })
 
 // 剩余名额
@@ -238,19 +325,32 @@ const remainingSlots = computed(() => {
 // 是否可以申请
 const canApply = computed(() => {
   if (!activity.value) return false
-  const activityDate = new Date(activity.value.time)
-  const now = new Date()
-  return activityDate >= now && activity.value.participants < activity.value.maxParticipants
+  // 只有报名中且未满员且未报名的活动可以申请
+  return activity.value.status === 'open' && 
+         activity.value.participants < activity.value.maxParticipants &&
+         !activity.value.isRegistered
 })
 
 const getButtonText = computed(() => {
   if (!activity.value) return '提交申请'
-  const activityDate = new Date(activity.value.time)
-  const now = new Date()
   
-  if (activityDate < now) return '活动已结束'
-  if (activity.value.participants >= activity.value.maxParticipants) return '名额已满'
-  return '提交申请'
+  if (activity.value.isRegistered) return '已报名'
+  
+  switch (activity.value.status) {
+    case 'open':
+      if (activity.value.participants >= activity.value.maxParticipants) {
+        return '名额已满'
+      }
+      return '提交申请'
+    case 'ongoing':
+      return '活动进行中'
+    case 'closed':
+      return '活动已结束'
+    case 'cancelled':
+      return '活动已取消'
+    default:
+      return '提交申请'
+  }
 })
 
 // 申请表单
@@ -275,19 +375,26 @@ const rules = {
   ],
   studentId: [{ required: true, message: '请输入学号或工号', trigger: 'blur' }],
   college: [{ required: true, message: '请选择所属学院', trigger: 'change' }],
-  reason: [{ required: true, message: '请填写申请理由', trigger: 'blur' }]
+  reason: [{ required: false, message: '请填写申请理由', trigger: 'blur' }]
 }
 
 const handleSubmit = async () => {
   if (!formRef.value) return
   
-  await formRef.value.validate((valid) => {
+  await formRef.value.validate(async (valid) => {
     if (valid) {
-      ElMessage.success('申请提交成功，请等待审核')
-      // 这里后期对接API
-      setTimeout(() => {
-        router.push('/student/activities')
-      }, 1500)
+      try {
+        loading.value = true
+        // 调用报名接口，传递申请理由
+        await registerActivity(activity.value.id, applyForm.value.reason)
+        ElMessage.success('报名成功')
+        // 重新加载活动详情
+        await loadActivityDetail()
+      } catch (error) {
+        console.error('报名失败:', error)
+      } finally {
+        loading.value = false
+      }
     }
   })
 }

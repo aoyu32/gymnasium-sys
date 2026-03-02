@@ -7,7 +7,10 @@
     <div class="activity-info">
       <div class="activity-header">
         <h3>{{ activity.title }}</h3>
-        <el-tag :type="getStatusTagType" size="small">{{ getStatusText }}</el-tag>
+        <el-tag v-if="activity.isMyActivity && activity.approvalStatus !== 'approved'" :type="getApprovalTagType" size="small">
+          {{ getApprovalStatusText }}
+        </el-tag>
+        <el-tag v-else :type="getStatusTagType" size="small">{{ getStatusText }}</el-tag>
       </div>
       <div class="activity-meta">
         <div class="meta-item">
@@ -27,7 +30,32 @@
         <el-tag :type="activity.activityType === 'public' ? 'info' : ''" size="small" effect="plain">
           {{ activity.activityType === 'public' ? '公共活动' : '私人活动' }}
         </el-tag>
-        <el-button type="primary" size="small" @click="handleViewDetail">查看详情</el-button>
+        <div v-if="activity.isMyActivity" class="action-buttons">
+          <el-button 
+            type="warning" 
+            size="small"
+            :disabled="!canEdit"
+            @click="handleEdit"
+          >
+            修改活动
+          </el-button>
+          <el-button 
+            type="danger" 
+            size="small"
+            :disabled="!canCancel"
+            @click="handleCancel"
+          >
+            取消活动
+          </el-button>
+        </div>
+        <el-button 
+          v-else
+          type="primary" 
+          size="small" 
+          @click="handleViewDetail"
+        >
+          查看详情
+        </el-button>
       </div>
     </div>
   </div>
@@ -45,6 +73,46 @@ const props = defineProps({
     type: Object,
     required: true
   }
+})
+
+const emit = defineEmits(['edit', 'cancel'])
+
+// 审核状态标签类型
+const getApprovalTagType = computed(() => {
+  switch (props.activity.approvalStatus) {
+    case 'pending':
+      return 'warning'
+    case 'approved':
+      return 'success'
+    case 'rejected':
+      return 'danger'
+    default:
+      return 'info'
+  }
+})
+
+// 审核状态文本
+const getApprovalStatusText = computed(() => {
+  switch (props.activity.approvalStatus) {
+    case 'pending':
+      return '待审核'
+    case 'approved':
+      return '已通过'
+    case 'rejected':
+      return '已拒绝'
+    default:
+      return '未知'
+  }
+})
+
+// 是否可以编辑（只有进行中和已结束的活动不能编辑）
+const canEdit = computed(() => {
+  return props.activity.status === 'open'
+})
+
+// 是否可以取消（只有报名中且未取消的活动可以取消）
+const canCancel = computed(() => {
+  return props.activity.status === 'open'
 })
 
 // 根据参与人数判断活动状态
@@ -84,6 +152,14 @@ const getStatusText = computed(() => {
 
 const handleViewDetail = () => {
   router.push(`/student/activities/${props.activity.id}`)
+}
+
+const handleEdit = () => {
+  emit('edit', props.activity)
+}
+
+const handleCancel = () => {
+  emit('cancel', props.activity)
 }
 </script>
 
