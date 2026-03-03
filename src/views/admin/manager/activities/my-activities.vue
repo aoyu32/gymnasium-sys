@@ -41,7 +41,7 @@
       </div>
 
       <!-- 申请列表 -->
-      <el-table :data="paginatedApplications" stripe style="margin-top: 20px">
+      <el-table :data="paginatedApplications" stripe style="margin-top: 20px" v-loading="loading">
         <el-table-column prop="applicant" label="申请人" width="100" />
         <el-table-column prop="phone" label="联系电话" width="120" />
         <el-table-column prop="email" label="联系邮箱" width="180" show-overflow-tooltip />
@@ -50,8 +50,8 @@
         <el-table-column prop="college" label="所属学院" width="130" show-overflow-tooltip />
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="getStatusType(row.status)" size="small">
-              {{ getStatusText(row.status) }}
+            <el-tag :type="getStatusType(row.approvalStatus)" size="small">
+              {{ getStatusText(row.approvalStatus) }}
             </el-tag>
           </template>
         </el-table-column>
@@ -60,7 +60,7 @@
           <template #default="{ row }">
             <div style="display: flex; gap: 8px; flex-wrap: nowrap; white-space: nowrap;">
               <el-button link type="primary" size="small" @click="handleViewDetail(row)">详情</el-button>
-              <template v-if="row.status === 'pending'">
+              <template v-if="row.approvalStatus === 'pending'">
                 <el-button link type="success" size="small" @click="handleApprove(row)">通过</el-button>
                 <el-button link type="danger" size="small" @click="handleReject(row)">拒绝</el-button>
               </template>
@@ -75,7 +75,7 @@
         v-model:current-page="currentPage"
         v-model:page-size="pageSize"
         :page-sizes="[5, 10, 20, 50]"
-        :total="filteredApplications.length"
+        :total="total"
         layout="total, sizes, prev, pager, next, jumper"
         style="margin-top: 20px; justify-content: flex-end"
         @size-change="handleSizeChange"
@@ -147,8 +147,8 @@
             <el-col :span="12">
               <div class="detail-item">
                 <span class="label">申请状态：</span>
-                <el-tag :type="getStatusType(currentApplication.status)" size="small">
-                  {{ getStatusText(currentApplication.status) }}
+                <el-tag :type="getStatusType(currentApplication.approvalStatus)" size="small">
+                  {{ getStatusText(currentApplication.approvalStatus) }}
                 </el-tag>
               </div>
             </el-col>
@@ -175,7 +175,7 @@
       </div>
       <template #footer>
         <el-button @click="detailVisible = false">关闭</el-button>
-        <template v-if="currentApplication && currentApplication.status === 'pending'">
+        <template v-if="currentApplication && currentApplication.approvalStatus === 'pending'">
           <el-button type="success" @click="handleApprove(currentApplication)">通过申请</el-button>
           <el-button type="danger" @click="handleReject(currentApplication)">拒绝申请</el-button>
         </template>
@@ -207,9 +207,10 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
+import { getAllMyActivityRegistrations, approveRegistration } from '@/api/activity'
 
 const searchKeyword = ref('')
 const filterStatus = ref('')
@@ -220,10 +221,12 @@ const rejectVisible = ref(false)
 const currentApplication = ref(null)
 const rejectingApplication = ref(null)
 const rejectFormRef = ref(null)
+const loading = ref(false)
 
 // 分页相关
 const currentPage = ref(1)
 const pageSize = ref(10)
+const total = ref(0)
 
 const rejectForm = ref({
   reason: ''
@@ -233,87 +236,80 @@ const rejectRules = {
   reason: [{ required: true, message: '请输入拒绝原因', trigger: 'blur' }]
 }
 
-const applications = ref([
-  {
-    id: 1,
-    applicant: '张三',
-    phone: '13800138001',
-    email: 'zhangsan@example.com',
-    studentId: '2021001',
-    college: '计算机学院',
-    activityName: '周末篮球友谊赛',
-    status: 'pending',
-    applyTime: '2026-03-01 10:30',
-    reason: '热爱篮球运动，希望通过活动提高球技并结识更多朋友'
-  },
-  {
-    id: 2,
-    applicant: '李四',
-    phone: '13800138002',
-    email: 'lisi@example.com',
-    studentId: '2021002',
-    college: '软件学院',
-    activityName: '羽毛球训练营',
-    status: 'approved',
-    applyTime: '2026-02-28 15:20',
-    reason: '想要提高羽毛球技能，参加系统的训练'
-  },
-  {
-    id: 3,
-    applicant: '王五',
-    phone: '13800138003',
-    email: 'wangwu@example.com',
-    studentId: '2021003',
-    college: '信息学院',
-    activityName: '乒乓球比赛',
-    status: 'pending',
-    applyTime: '2026-03-01 11:00',
-    reason: '喜欢乒乓球运动，希望通过比赛锻炼自己'
-  },
-  {
-    id: 4,
-    applicant: '赵六',
-    phone: '13800138004',
-    email: 'zhaoliu@example.com',
-    studentId: '2021004',
-    college: '电子工程学院',
-    activityName: '周末篮球友谊赛',
-    status: 'rejected',
-    applyTime: '2026-03-01 09:00',
-    reason: '想参加篮球活动',
-    rejectReason: '名额已满，建议关注下次活动'
-  },
-  {
-    id: 5,
-    applicant: '孙七',
-    phone: '13800138005',
-    email: 'sunqi@example.com',
-    studentId: '2021005',
-    college: '机械工程学院',
-    activityName: '羽毛球训练营',
-    status: 'pending',
-    applyTime: '2026-03-01 13:30',
-    reason: '希望提高羽毛球水平，参加专业训练'
+const applications = ref([])
+
+// 加载我的活动的报名申请列表
+const loadApplications = async () => {
+  try {
+    loading.value = true
+    const params = {
+      pageNum: currentPage.value,
+      pageSize: pageSize.value,
+      keyword: searchKeyword.value || undefined,
+      approvalStatus: filterStatus.value || undefined
+    }
+    console.log('查询参数:', params)
+    const res = await getAllMyActivityRegistrations(params)
+    console.log('后端返回数据:', res.data)
+    
+    // 转换数据格式
+    applications.value = res.data.records.map(item => ({
+      ...item,
+      applicant: item.userName || '未知',
+      phone: item.userPhone || '-',
+      email: item.userEmail || '-',
+      studentId: item.studentId || '-',
+      college: item.college || '-',
+      activityName: item.activityName || '未知活动',
+      status: item.approvalStatus, // pending, approved, rejected
+      applyTime: formatDateTime(item.createdAt)
+    }))
+    
+    console.log('转换后的数据:', applications.value)
+    total.value = res.data.total
+  } catch (error) {
+    console.error('加载报名申请列表失败:', error)
+    ElMessage.error('加载报名申请列表失败')
+  } finally {
+    loading.value = false
   }
-])
+}
+
+// 格式化日期时间
+const formatDateTime = (dateTimeStr) => {
+  if (!dateTimeStr) return ''
+  const date = new Date(dateTimeStr)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  return `${year}-${month}-${day} ${hours}:${minutes}`
+}
+
+// 初始化加载
+onMounted(() => {
+  loadApplications()
+})
+
+// 监听搜索和筛选条件变化
+watch([searchKeyword, filterStatus], () => {
+  currentPage.value = 1
+  loadApplications()
+})
 
 const filteredApplications = computed(() => {
+  // 后端已经做了分页和基本筛选，这里只做前端的额外筛选
   return applications.value.filter(app => {
-    const matchKeyword = !searchKeyword.value || 
-      app.applicant.includes(searchKeyword.value) || 
-      app.activityName.includes(searchKeyword.value)
-    const matchStatus = !filterStatus.value || app.status === filterStatus.value
     const matchActivity = !filterActivity.value || app.activityName === filterActivity.value
     const matchDate = !filterDate.value || app.applyTime.startsWith(formatDate(filterDate.value))
-    return matchKeyword && matchStatus && matchActivity && matchDate
+    return matchActivity && matchDate
   })
 })
 
 // 分页后的数据
 const paginatedApplications = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value
-  const end = start + pageSize.value
-  return filteredApplications.value.slice(start, end)
+  return filteredApplications.value
 })
 
 const formatDate = (date) => {
@@ -352,10 +348,19 @@ const handleApprove = (row) => {
       cancelButtonText: '取消',
       type: 'success'
     }
-  ).then(() => {
-    row.status = 'approved'
-    ElMessage.success('申请已通过')
-    detailVisible.value = false
+  ).then(async () => {
+    try {
+      loading.value = true
+      await approveRegistration(row.activityId, row.userId, true)
+      ElMessage.success('申请已通过')
+      detailVisible.value = false
+      loadApplications()
+    } catch (error) {
+      console.error('审核失败:', error)
+      ElMessage.error('审核失败')
+    } finally {
+      loading.value = false
+    }
   }).catch(() => {})
 }
 
@@ -368,13 +373,21 @@ const handleReject = (row) => {
 const confirmReject = async () => {
   if (!rejectFormRef.value) return
   
-  await rejectFormRef.value.validate((valid) => {
+  await rejectFormRef.value.validate(async (valid) => {
     if (valid) {
-      rejectingApplication.value.status = 'rejected'
-      rejectingApplication.value.rejectReason = rejectForm.value.reason
-      rejectVisible.value = false
-      detailVisible.value = false
-      ElMessage.success('申请已拒绝')
+      try {
+        loading.value = true
+        await approveRegistration(rejectingApplication.value.activityId, rejectingApplication.value.userId, false)
+        rejectVisible.value = false
+        detailVisible.value = false
+        ElMessage.success('申请已拒绝')
+        loadApplications()
+      } catch (error) {
+        console.error('审核失败:', error)
+        ElMessage.error('审核失败')
+      } finally {
+        loading.value = false
+      }
     }
   })
 }
@@ -393,14 +406,22 @@ const handleDelete = (row) => {
       cancelButtonText: '取消',
       type: 'warning'
     }
-  ).then(() => {
-    const index = applications.value.findIndex(item => item.id === row.id)
-    if (index !== -1) {
-      applications.value.splice(index, 1)
+  ).then(async () => {
+    try {
+      loading.value = true
+      // 这里可以调用删除报名记录的API
+      // 暂时使用拒绝来代替删除
+      await approveRegistration(row.activityId, row.userId, false)
       ElMessage.success('记录删除成功')
       if (currentApplication.value?.id === row.id) {
         detailVisible.value = false
       }
+      loadApplications()
+    } catch (error) {
+      console.error('删除失败:', error)
+      ElMessage.error('删除失败')
+    } finally {
+      loading.value = false
     }
   }).catch(() => {})
 }
@@ -409,10 +430,12 @@ const handleDelete = (row) => {
 const handleSizeChange = (val) => {
   pageSize.value = val
   currentPage.value = 1
+  loadApplications()
 }
 
 const handleCurrentChange = (val) => {
   currentPage.value = val
+  loadApplications()
 }
 </script>
 

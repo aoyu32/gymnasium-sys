@@ -279,4 +279,126 @@ const router = createRouter({
   routes
 })
 
+// 全局前置守卫 - 验证登录状态和角色权限
+router.beforeEach((to, from, next) => {
+  const token = localStorage.getItem('token')
+  const role = localStorage.getItem('role')
+
+  // 调试信息
+  console.log('=== 路由守卫 ===')
+  console.log('从:', from.path)
+  console.log('到:', to.path)
+  console.log('Token:', token ? '存在' : '不存在')
+  console.log('Role:', role)
+  console.log('===============')
+
+  // 如果访问的是认证页面（登录、注册、忘记密码），直接放行
+  if (to.path.startsWith('/auth')) {
+    // 如果已登录，根据角色重定向到对应首页，防止已登录用户访问登录页
+    if (token && role) {
+      console.log('已登录用户访问认证页面，重定向到首页')
+      if (role === 'student') {
+        next('/student/home')
+      } else if (role === 'manager') {
+        next('/admin/manager/home')
+      } else if (role === 'admin') {
+        next('/admin/system/home')
+      } else {
+        next()
+      }
+    } else {
+      next()
+    }
+    return
+  }
+
+  // 如果访问的是需要登录的页面，验证token
+  if (!token || !role) {
+    // 未登录，重定向到登录页
+    console.log('未登录，重定向到登录页')
+    next('/auth/login')
+    return
+  }
+
+  // 验证角色权限 - 学生只能访问学生页面
+  if (to.path.startsWith('/student')) {
+    if (role !== 'student') {
+      // 非学生访问学生页面，重定向到对应首页
+      console.log('非学生访问学生页面，重定向')
+      if (role === 'manager') {
+        next('/admin/manager/home')
+      } else if (role === 'admin') {
+        next('/admin/system/home')
+      } else {
+        next('/auth/login')
+      }
+      return
+    }
+  }
+
+  // 验证角色权限 - 场地负责人只能访问manager页面
+  if (to.path.startsWith('/admin/manager')) {
+    if (role !== 'manager') {
+      // 非场地负责人访问场地负责人页面，重定向到对应首页
+      console.log('非场地负责人访问场地负责人页面，重定向')
+      if (role === 'student') {
+        next('/student/home')
+      } else if (role === 'admin') {
+        next('/admin/system/home')
+      } else {
+        next('/auth/login')
+      }
+      return
+    }
+  }
+
+  // 验证角色权限 - 系统管理员只能访问system页面
+  if (to.path.startsWith('/admin/system')) {
+    if (role !== 'admin') {
+      // 非系统管理员访问系统管理员页面，重定向到对应首页
+      console.log('非系统管理员访问系统管理员页面，重定向')
+      if (role === 'student') {
+        next('/student/home')
+      } else if (role === 'manager') {
+        next('/admin/manager/home')
+      } else {
+        next('/auth/login')
+      }
+      return
+    }
+  }
+
+  // 处理/admin路径的重定向
+  if (to.path === '/admin' || to.path === '/admin/') {
+    console.log('访问/admin，根据角色重定向')
+    if (role === 'manager') {
+      next('/admin/manager/home')
+    } else if (role === 'admin') {
+      next('/admin/system/home')
+    } else {
+      next('/auth/login')
+    }
+    return
+  }
+
+  // 处理根路径的重定向
+  if (to.path === '/') {
+    console.log('访问根路径，根据角色重定向')
+    if (role === 'student') {
+      next('/student/home')
+    } else if (role === 'manager') {
+      next('/admin/manager/home')
+    } else if (role === 'admin') {
+      next('/admin/system/home')
+    } else {
+      next('/auth/login')
+    }
+    return
+  }
+
+  // 验证通过，放行
+  console.log('验证通过，放行')
+  next()
+})
+
 export default router
