@@ -20,7 +20,7 @@
           </template>
         </el-input>
         <el-select v-model="filterStatus" placeholder="申请状态" clearable style="width: 150px; margin-left: 12px">
-          <el-option label="全部" value="" />
+          <el-option label="全部" value="all" />
           <el-option label="待审批" value="pending" />
           <el-option label="已通过" value="approved" />
           <el-option label="已拒绝" value="rejected" />
@@ -73,19 +73,25 @@
         </el-table-column>
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="getStatusType(row.status)" size="small">
-              {{ getStatusText(row.status) }}
+            <el-tag :type="getStatusType(row.approvalStatus)" size="small">
+              {{ getStatusText(row.approvalStatus) }}
             </el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="applyTime" label="申请时间" width="160" />
-        <el-table-column label="操作" width="240" fixed="right">
+        <el-table-column label="操作" width="280" fixed="right">
           <template #default="{ row }">
             <div style="display: flex; gap: 8px; flex-wrap: nowrap; white-space: nowrap;">
               <el-button link type="primary" size="small" @click="handleViewDetail(row)">详情</el-button>
-              <template v-if="row.status === 'pending'">
+              <template v-if="row.approvalStatus === 'pending'">
                 <el-button link type="success" size="small" @click="handleApprove(row)">通过</el-button>
                 <el-button link type="danger" size="small" @click="handleReject(row)">拒绝</el-button>
+              </template>
+              <template v-else-if="row.approvalStatus === 'approved'">
+                <el-button link type="warning" size="small" @click="handleCancelApprove(row)">取消通过</el-button>
+              </template>
+              <template v-else-if="row.approvalStatus === 'rejected'">
+                <el-button link type="warning" size="small" @click="handleCancelReject(row)">取消拒绝</el-button>
               </template>
               <el-button link type="danger" size="small" @click="handleDelete(row)">删除</el-button>
             </div>
@@ -191,8 +197,8 @@
             <el-col :span="12">
               <div class="detail-item">
                 <span class="label">申请状态：</span>
-                <el-tag :type="getStatusType(currentApplication.status)" size="small">
-                  {{ getStatusText(currentApplication.status) }}
+                <el-tag :type="getStatusType(currentApplication.approvalStatus)" size="small">
+                  {{ getStatusText(currentApplication.approvalStatus) }}
                 </el-tag>
               </div>
             </el-col>
@@ -227,9 +233,15 @@
       </div>
       <template #footer>
         <el-button @click="detailVisible = false">关闭</el-button>
-        <template v-if="currentApplication && currentApplication.status === 'pending'">
+        <template v-if="currentApplication && currentApplication.approvalStatus === 'pending'">
           <el-button type="success" @click="handleApprove(currentApplication)">通过申请</el-button>
           <el-button type="danger" @click="handleReject(currentApplication)">拒绝申请</el-button>
+        </template>
+        <template v-else-if="currentApplication && currentApplication.approvalStatus === 'approved'">
+          <el-button type="warning" @click="handleCancelApprove(currentApplication)">取消通过</el-button>
+        </template>
+        <template v-else-if="currentApplication && currentApplication.approvalStatus === 'rejected'">
+          <el-button type="warning" @click="handleCancelReject(currentApplication)">取消拒绝</el-button>
         </template>
       </template>
     </el-dialog>
@@ -259,13 +271,13 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
 import { getActivityPage, approveActivity, deleteActivity, getActivityById } from '@/api/activity'
 
 const searchKeyword = ref('')
-const filterStatus = ref('')
+const filterStatus = ref('all') // 默认查询所有状态
 const filterActivity = ref('')
 const filterDate = ref('')
 const detailVisible = ref(false)
@@ -298,10 +310,12 @@ const loadApplications = async () => {
       pageNum: currentPage.value,
       pageSize: pageSize.value,
       keyword: searchKeyword.value || undefined,
-      approvalStatus: filterStatus.value || undefined,
+      approvalStatus: filterStatus.value || 'all', // 默认查询所有状态，或根据筛选条件查询
       activityType: 'private' // 只查询私人活动
     }
+    console.log('查询参数:', params)
     const res = await getActivityPage(params)
+    console.log('后端返回数据:', res.data)
     
     // 转换数据格式
     applications.value = res.data.records.map(item => ({
@@ -311,11 +325,12 @@ const loadApplications = async () => {
       email: item.creatorEmail || '-',
       studentId: item.creatorStudentId || '-',
       time: formatDateTime(item.activityTime),
-      venue: item.areaName || item.venueName || '待定',
-      applyTime: formatDateTime(item.createTime),
-      status: item.approvalStatus // pending, approved, rejected
+      venue: item.venueName || '待定',
+      area: item.areaName || '',
+      applyTime: formatDateTime(item.createdAt)
     }))
     
+    console.log('转换后的数据:', applications.value)
     total.value = res.data.total
   } catch (error) {
     console.error('加载活动申请列表失败:', error)
@@ -342,15 +357,18 @@ onMounted(() => {
   loadApplications()
 })
 
+// 监听搜索和筛选条件变化
+watch([searchKeyword, filterStatus], () => {
+  currentPage.value = 1
+  loadApplications()
+})
+
 const filteredApplications = computed(() => {
+  // 后端已经做了分页和基本筛选，这里只做前端的额外筛选
   return applications.value.filter(app => {
-    const matchKeyword = !searchKeyword.value || 
-      app.applicant.includes(searchKeyword.value) || 
-      app.title.includes(searchKeyword.value)
-    const matchStatus = !filterStatus.value || app.status === filterStatus.value
     const matchActivity = !filterActivity.value || app.title === filterActivity.value
     const matchDate = !filterDate.value || app.time.startsWith(formatDate(filterDate.value))
-    return matchKeyword && matchStatus && matchActivity && matchDate
+    return matchActivity && matchDate
   })
 })
 
@@ -428,6 +446,56 @@ const handleApprove = (row) => {
   }).catch(() => {})
 }
 
+const handleCancelApprove = (row) => {
+  ElMessageBox.confirm(
+    `确定取消通过"${row.applicant}"的活动申请吗？状态将改为待审批。`,
+    '取消通过',
+    {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    }
+  ).then(async () => {
+    try {
+      loading.value = true
+      await approveActivity(row.id, null) // null表示重置为pending
+      ElMessage.success('已取消通过，状态改为待审批')
+      detailVisible.value = false
+      loadApplications()
+    } catch (error) {
+      console.error('操作失败:', error)
+      ElMessage.error('操作失败')
+    } finally {
+      loading.value = false
+    }
+  }).catch(() => {})
+}
+
+const handleCancelReject = (row) => {
+  ElMessageBox.confirm(
+    `确定取消拒绝"${row.applicant}"的活动申请吗？状态将改为待审批。`,
+    '取消拒绝',
+    {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    }
+  ).then(async () => {
+    try {
+      loading.value = true
+      await approveActivity(row.id, null) // null表示重置为pending
+      ElMessage.success('已取消拒绝，状态改为待审批')
+      detailVisible.value = false
+      loadApplications()
+    } catch (error) {
+      console.error('操作失败:', error)
+      ElMessage.error('操作失败')
+    } finally {
+      loading.value = false
+    }
+  }).catch(() => {})
+}
+
 const handleReject = (row) => {
   rejectingApplication.value = row
   rejectForm.value.reason = ''
@@ -466,9 +534,9 @@ const handleViewDetail = async (row) => {
       email: res.data.creatorEmail || '-',
       studentId: res.data.creatorStudentId || '-',
       time: formatDateTime(res.data.activityTime),
-      venue: res.data.areaName || res.data.venueName || '待定',
-      applyTime: formatDateTime(res.data.createTime),
-      status: res.data.approvalStatus
+      venue: res.data.venueName || '待定',
+      area: res.data.areaName || '',
+      applyTime: formatDateTime(res.data.createdAt)
     }
     detailVisible.value = true
   } catch (error) {
