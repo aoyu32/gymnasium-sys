@@ -509,6 +509,7 @@
             action="#"
             list-type="picture-card"
             :auto-upload="false"
+            :on-change="handleReturnImageChange"
             :limit="3"
             accept="image/*"
           >
@@ -846,6 +847,7 @@ const loadEquipmentRecords = async () => {
       ...item,
       brand: item.brandName ? `${item.brandName} ${item.brandModel || ''}` : '-',
       returnDate: item.expectedReturnDate,
+      actualReturnDate: item.actualReturnDate, // 添加实际归还日期
       statusText: getEquipmentStatusText(item.status)
     }))
   } catch (error) {
@@ -1086,6 +1088,42 @@ const handleReturnEquipment = (equipment) => {
   returnDialogVisible.value = true
 }
 
+// 归还器材图片上传处理
+const handleReturnImageChange = async (file, fileList) => {
+  if (!file.raw) return
+  
+  // 检查文件大小
+  if (file.raw.size > 5 * 1024 * 1024) {
+    ElMessage.warning('图片大小不能超过5MB')
+    const index = fileList.findIndex(f => f.uid === file.uid)
+    if (index > -1) {
+      fileList.splice(index, 1)
+    }
+    return
+  }
+  
+  try {
+    // 上传图片到OSS
+    const res = await uploadImage(file.raw, 'equipment-return')
+    
+    // 更新文件列表中的URL
+    const fileIndex = returnForm.value.images.findIndex(f => f.uid === file.uid)
+    if (fileIndex > -1) {
+      returnForm.value.images[fileIndex].url = res.data
+    }
+    
+    ElMessage.success('图片上传成功')
+  } catch (error) {
+    console.error('图片上传失败:', error)
+    ElMessage.error(error.message || '图片上传失败')
+    // 上传失败，从列表中移除
+    const index = fileList.findIndex(f => f.uid === file.uid)
+    if (index > -1) {
+      fileList.splice(index, 1)
+    }
+  }
+}
+
 const confirmReturn = async () => {
   if (!returnFormRef.value) return
   
@@ -1097,10 +1135,15 @@ const confirmReturn = async () => {
       }
       
       try {
-        // 提取图片URL（实际项目中需要先上传图片到服务器）
-        const imageUrls = returnForm.value.images.map(file => {
-          return file.url || 'https://via.placeholder.com/400'
-        })
+        // 提取已上传的图片URL
+        const imageUrls = returnForm.value.images
+          .filter(file => file.url) // 只取已上传成功的图片
+          .map(file => file.url)
+        
+        if (imageUrls.length === 0) {
+          ElMessage.warning('请等待图片上传完成')
+          return
+        }
         
         await createReturnApplication({
           borrowId: currentReturnEquipment.value.id,
