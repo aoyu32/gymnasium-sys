@@ -52,3 +52,55 @@ export function deleteVenue(id) {
         method: 'delete'
     })
 }
+
+/**
+ * 添加场地区域
+ */
+export function addVenueArea(venueId, data) {
+    return request({
+        url: `/venues/${venueId}/areas`,
+        method: 'post',
+        data
+    })
+}
+
+/**
+ * 更新场地区域
+ */
+export function updateVenueArea(venueId, areaId, data) {
+    return request({
+        url: `/venues/${venueId}/areas/${areaId}`,
+        method: 'put',
+        data
+    })
+}
+
+/**
+ * 删除场地区域
+ */
+export function deleteVenueArea(venueId, areaId) {
+    return request({
+        url: `/venues/${venueId}/areas/${areaId}`,
+        method: 'delete'
+    })
+}
+
+/**
+ * 切换区域使用状态
+ */
+export function toggleAreaStatus(venueId, areaId) {
+    return request({
+        url: `/venues/${venueId}/areas/${areaId}/toggle-status`,
+        method: 'put'
+    })
+}
+
+/**
+ * 切换区域维护状态
+ */
+export function toggleAreaMaintenance(venueId, areaId) {
+    return request({
+        url: `/venues/${venueId}/areas/${areaId}/toggle-maintenance`,
+        method: 'put'
+    })
+}

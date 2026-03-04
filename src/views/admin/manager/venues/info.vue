@@ -413,7 +413,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Search } from '@element-plus/icons-vue'
-import { getVenuePage, getVenueById, addVenue, updateVenue, deleteVenue } from '@/api/venue'
+import { getVenuePage, getVenueById, addVenue, updateVenue, deleteVenue, addVenueArea, updateVenueArea, deleteVenueArea, toggleAreaStatus, toggleAreaMaintenance } from '@/api/venue'
 import { uploadImage } from '@/api/file'
 
 const searchKeyword = ref('')
@@ -900,54 +900,82 @@ const handleEditArea = (row, index) => {
 const handleSubmitArea = async () => {
   if (!areaFormRef.value) return
   
-  await areaFormRef.value.validate((valid) => {
+  await areaFormRef.value.validate(async (valid) => {
     if (valid) {
-      if (!currentVenue.value.areas) {
-        currentVenue.value.areas = []
-      }
-      
-      if (editingAreaIndex.value !== null) {
-        // 编辑区域
-        currentVenue.value.areas[editingAreaIndex.value] = {
-          ...areaFormData.value,
-          id: currentVenue.value.areas[editingAreaIndex.value].id
+      try {
+        loading.value = true
+        
+        if (editingAreaIndex.value !== null) {
+          // 编辑区域
+          const area = currentVenue.value.areas[editingAreaIndex.value]
+          await updateVenueArea(currentVenue.value.id, area.id, areaFormData.value)
+          ElMessage.success('区域更新成功')
+        } else {
+          // 添加区域
+          await addVenueArea(currentVenue.value.id, areaFormData.value)
+          ElMessage.success('区域添加成功')
         }
-        ElMessage.success('区域更新成功')
-      } else {
-        // 添加区域
-        const newArea = {
-          ...areaFormData.value,
-          id: Date.now()
-        }
-        currentVenue.value.areas.push(newArea)
-        ElMessage.success('区域添加成功')
+        
+        // 重新加载场地详情
+        const res = await getVenueById(currentVenue.value.id)
+        currentVenue.value = res.data
+        
+        // 重新加载场地列表
+        await loadVenues()
+        
+        areaFormVisible.value = false
+      } catch (error) {
+        console.error('保存区域失败:', error)
+        ElMessage.error(error.message || '保存区域失败')
+      } finally {
+        loading.value = false
       }
-      
-      // 自动更新场地状态
-      currentVenue.value.status = calculateVenueStatus(currentVenue.value)
-      
-      areaFormVisible.value = false
     }
   })
 }
 
-const handleToggleAreaStatus = (row) => {
-  row.inUse = !row.inUse
-  ElMessage.success('区域使用状态更新成功')
+const handleToggleAreaStatus = async (row) => {
+  try {
+    loading.value = true
+    await toggleAreaStatus(currentVenue.value.id, row.id)
+    row.inUse = !row.inUse
+    ElMessage.success('区域使用状态更新成功')
+    
+    // 重新加载场地列表
+    await loadVenues()
+  } catch (error) {
+    console.error('更新区域状态失败:', error)
+    ElMessage.error(error.message || '更新区域状态失败')
+  } finally {
+    loading.value = false
+  }
 }
 
-const handleToggleAreaMaintenance = (row) => {
-  row.maintenance = !row.maintenance
-  
-  // 自动更新场地状态
-  if (currentVenue.value) {
-    currentVenue.value.status = calculateVenueStatus(currentVenue.value)
+const handleToggleAreaMaintenance = async (row) => {
+  try {
+    loading.value = true
+    await toggleAreaMaintenance(currentVenue.value.id, row.id)
+    row.maintenance = !row.maintenance
+    
+    // 自动更新场地状态
+    if (currentVenue.value) {
+      currentVenue.value.status = calculateVenueStatus(currentVenue.value)
+    }
+    
+    ElMessage.success('区域维护状态更新成功')
+    
+    // 重新加载场地列表
+    await loadVenues()
+  } catch (error) {
+    console.error('更新区域维护状态失败:', error)
+    ElMessage.error(error.message || '更新区域维护状态失败')
+  } finally {
+    loading.value = false
   }
-  
-  ElMessage.success('区域维护状态更新成功')
 }
 
 const handleDeleteArea = (index) => {
+  const area = currentVenue.value.areas[index]
   ElMessageBox.confirm(
     '确定要删除该区域吗？',
     '提示',
@@ -956,9 +984,21 @@ const handleDeleteArea = (index) => {
       cancelButtonText: '取消',
       type: 'warning'
     }
-  ).then(() => {
-    currentVenue.value.areas.splice(index, 1)
-    ElMessage.success('区域删除成功')
+  ).then(async () => {
+    try {
+      loading.value = true
+      await deleteVenueArea(currentVenue.value.id, area.id)
+      currentVenue.value.areas.splice(index, 1)
+      ElMessage.success('区域删除成功')
+      
+      // 重新加载场地列表
+      await loadVenues()
+    } catch (error) {
+      console.error('删除区域失败:', error)
+      ElMessage.error(error.message || '删除区域失败')
+    } finally {
+      loading.value = false
+    }
   }).catch(() => {})
 }
 
