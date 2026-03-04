@@ -226,9 +226,9 @@
                   <template #default="{ row }">
                     <el-button link type="primary" size="small" @click.stop="handleViewEquipmentDetail(row)">查看详情</el-button>
                     <el-button
-                      v-if="row.status === 'borrowed'"
+                      v-if="row.status === 'approved'"
                       link
-                      type="danger"
+                      type="warning"
                       size="small"
                       @click.stop="handleReturnEquipment(row)"
                     >
@@ -532,9 +532,10 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { User, Camera, Plus } from '@element-plus/icons-vue'
+import { getMyBorrowRecords, deleteBorrowApplication, createReturnApplication } from '@/api/equipment'
 
 const activeTab = ref('privateActivities')
 const showEditDialog = ref(false)
@@ -715,39 +716,38 @@ const venueBookings = ref([
   }
 ])
 
-const equipmentRecords = ref([
-  {
-    id: 1,
-    equipmentId: 1,
-    equipmentName: '篮球',
-    brand: '斯伯丁 NBA官方用球',
-    quantity: 2,
-    borrowDate: '2026-02-20',
-    returnDate: '2026-02-27',
-    status: 'borrowed',
-    statusText: '借用中',
-    borrower: '张三',
-    phone: '13800138000',
-    studentId: '2021001',
-    reason: '班级篮球比赛使用'
-  },
-  {
-    id: 2,
-    equipmentId: 2,
-    equipmentName: '羽毛球拍',
-    brand: '尤尼克斯 NANORAY系列',
-    quantity: 1,
-    borrowDate: '2026-02-15',
-    returnDate: '2026-02-22',
-    status: 'returned',
-    statusText: '已归还',
-    borrower: '张三',
-    phone: '13800138000',
-    studentId: '2021001',
-    reason: '体育课使用',
-    actualReturnDate: '2026-02-21'
+const equipmentRecords = ref([])
+
+// 加载器材借还记录
+const loadEquipmentRecords = async () => {
+  try {
+    const res = await getMyBorrowRecords()
+    equipmentRecords.value = (res.data || []).map(item => ({
+      ...item,
+      brand: item.brandName ? `${item.brandName} ${item.brandModel || ''}` : '-',
+      returnDate: item.expectedReturnDate,
+      statusText: getEquipmentStatusText(item.status)
+    }))
+  } catch (error) {
+    console.error('加载器材借还记录失败:', error)
+    ElMessage.error('加载器材借还记录失败')
   }
-])
+}
+
+const getEquipmentStatusText = (status) => {
+  const textMap = {
+    pending: '待审批',
+    approved: '已通过',
+    rejected: '已拒绝',
+    returning: '归还审核中',
+    returned: '已归还'
+  }
+  return textMap[status] || status
+}
+
+onMounted(() => {
+  loadEquipmentRecords()
+})
 
 const handleSave = () => {
   Object.assign(userInfo.value, editForm.value)
@@ -914,28 +914,35 @@ const handleReturnEquipment = (equipment) => {
 const confirmReturn = async () => {
   if (!returnFormRef.value) return
   
-  await returnFormRef.value.validate((valid) => {
+  await returnFormRef.value.validate(async (valid) => {
     if (valid) {
       if (returnForm.value.images.length === 0) {
         ElMessage.warning('请上传器材照片')
         return
       }
       
-      ElMessage.success('归还申请已提交，请等待审核')
-      returnDialogVisible.value = false
-      
-      // 更新记录状态为审核中
-      const record = equipmentRecords.value.find(item => item.id === currentReturnEquipment.value.id)
-      if (record) {
-        record.status = 'returning'
-        record.statusText = '归还审核中'
+      try {
+        // 提取图片URL（实际项目中需要先上传图片到服务器）
+        const imageUrls = returnForm.value.images.map(file => {
+          return file.url || 'https://via.placeholder.com/400'
+        })
+        
+        await createReturnApplication({
+          borrowId: currentReturnEquipment.value.id,
+          condition: returnForm.value.condition,
+          remark: returnForm.value.remark,
+          images: imageUrls
+        })
+        
+        ElMessage.success('归还申请已提交，请等待审核')
+        returnDialogVisible.value = false
+        
+        // 重新加载借还记录
+        loadEquipmentRecords()
+      } catch (error) {
+        console.error('提交归还申请失败:', error)
+        ElMessage.error('提交归还申请失败')
       }
-      
-      // TODO: 调用API提交归还申请
-      console.log('归还信息:', {
-        ...currentReturnEquipment.value,
-        ...returnForm.value
-      })
     }
   })
 }
@@ -945,11 +952,14 @@ const handleDeleteEquipment = (equipment) => {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
     type: 'warning'
-  }).then(() => {
-    const index = equipmentRecords.value.findIndex(item => item.id === equipment.id)
-    if (index > -1) {
-      equipmentRecords.value.splice(index, 1)
+  }).then(async () => {
+    try {
+      await deleteBorrowApplication(equipment.id)
       ElMessage.success('删除成功')
+      loadEquipmentRecords()
+    } catch (error) {
+      console.error('删除记录失败:', error)
+      ElMessage.error('删除记录失败')
     }
   }).catch(() => {})
 }

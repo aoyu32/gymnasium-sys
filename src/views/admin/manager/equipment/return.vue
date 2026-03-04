@@ -14,15 +14,16 @@
           placeholder="搜索借用人或器材名称"
           clearable
           style="width: 300px"
+          @clear="handleSearch"
         >
           <template #prefix>
             <el-icon><Search /></el-icon>
           </template>
         </el-input>
-        <el-select v-model="filterStatus" placeholder="归还状态" clearable style="width: 150px; margin-left: 12px">
+        <el-select v-model="filterStatus" placeholder="归还状态" clearable style="width: 150px; margin-left: 12px" @change="handleSearch">
           <el-option label="全部" value="" />
-          <el-option label="待审核" value="returning" />
-          <el-option label="已归还" value="returned" />
+          <el-option label="待审核" value="pending" />
+          <el-option label="已归还" value="approved" />
           <el-option label="已拒绝" value="rejected" />
         </el-select>
         <el-date-picker
@@ -32,10 +33,11 @@
           clearable
           style="width: 200px; margin-left: 12px"
         />
+        <el-button type="primary" style="margin-left: 12px" @click="handleSearch">搜索</el-button>
       </div>
 
       <!-- 归还列表 -->
-      <el-table :data="paginatedReturns" stripe style="margin-top: 20px">
+      <el-table :data="paginatedReturns" :loading="loading" stripe style="margin-top: 20px">
         <el-table-column prop="borrower" label="借用人" width="100" />
         <el-table-column prop="phone" label="联系电话" width="120" />
         <el-table-column prop="studentId" label="学号/工号" width="120" />
@@ -69,7 +71,7 @@
           <template #default="{ row }">
             <div style="display: flex; gap: 8px; flex-wrap: nowrap; white-space: nowrap;">
               <el-button link type="primary" size="small" @click="handleViewDetail(row)">详情</el-button>
-              <template v-if="row.status === 'returning'">
+              <template v-if="row.status === 'pending'">
                 <el-button link type="success" size="small" @click="handleApprove(row)">通过</el-button>
                 <el-button link type="danger" size="small" @click="handleReject(row)">拒绝</el-button>
               </template>
@@ -84,7 +86,7 @@
         v-model:current-page="currentPage"
         v-model:page-size="pageSize"
         :page-sizes="[5, 10, 20, 50]"
-        :total="filteredReturns.length"
+        :total="total"
         layout="total, sizes, prev, pager, next, jumper"
         style="margin-top: 20px; justify-content: flex-end"
         @size-change="handleSizeChange"
@@ -220,7 +222,7 @@
       </div>
       <template #footer>
         <el-button @click="detailVisible = false">关闭</el-button>
-        <template v-if="currentReturn && currentReturn.status === 'returning'">
+        <template v-if="currentReturn && currentReturn.status === 'pending'">
           <el-button type="success" @click="handleApprove(currentReturn)">通过审核</el-button>
           <el-button type="danger" @click="handleReject(currentReturn)">拒绝归还</el-button>
         </template>
@@ -252,9 +254,15 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
+import { 
+  getReturnApplicationPage, 
+  approveReturnApplication, 
+  rejectReturnApplication,
+  deleteReturnApplication 
+} from '@/api/equipment'
 
 const searchKeyword = ref('')
 const filterStatus = ref('')
@@ -264,10 +272,12 @@ const rejectVisible = ref(false)
 const currentReturn = ref(null)
 const rejectingReturn = ref(null)
 const rejectFormRef = ref(null)
+const loading = ref(false)
 
 // 分页相关
 const currentPage = ref(1)
 const pageSize = ref(10)
+const total = ref(0)
 
 const rejectForm = ref({
   reason: ''
@@ -277,103 +287,48 @@ const rejectRules = {
   reason: [{ required: true, message: '请输入拒绝原因', trigger: 'blur' }]
 }
 
-const returns = ref([
-  {
-    id: 1,
-    borrower: '张三',
-    phone: '13800138001',
-    studentId: '2021001',
-    equipmentName: '篮球',
-    brandName: '斯伯丁',
-    brandModel: 'NBA官方用球',
-    quantity: 2,
-    condition: 'good',
-    borrowDate: '2026-02-25',
-    expectedReturnDate: '2026-02-28',
-    returnTime: '2026-03-01 14:30',
-    status: 'returning',
-    images: [
-      'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=400',
-      'https://images.unsplash.com/photo-1519766304817-4f37bda74a26?w=400'
-    ],
-    remark: '器材完好无损，已清洁'
-  },
-  {
-    id: 2,
-    borrower: '李四',
-    phone: '13800138002',
-    studentId: '2021002',
-    equipmentName: '羽毛球拍',
-    brandName: '尤尼克斯',
-    brandModel: 'NANORAY系列',
-    quantity: 2,
-    condition: 'normal',
-    borrowDate: '2026-02-20',
-    expectedReturnDate: '2026-02-27',
-    returnTime: '2026-02-27 16:00',
-    status: 'returned',
-    images: [
-      'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=400'
-    ],
-    remark: '球拍有轻微磨损，但不影响使用'
-  },
-  {
-    id: 3,
-    borrower: '王五',
-    phone: '13800138003',
-    studentId: '2021003',
-    equipmentName: '足球',
-    brandName: '阿迪达斯',
-    brandModel: '世界杯用球',
-    quantity: 1,
-    condition: 'damaged',
-    borrowDate: '2026-02-22',
-    expectedReturnDate: '2026-02-27',
-    returnTime: '2026-02-28 10:00',
-    status: 'rejected',
-    images: [
-      'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=400'
-    ],
-    remark: '足球表面有破损',
-    rejectReason: '器材损坏严重，需要赔偿后才能完成归还'
-  },
-  {
-    id: 4,
-    borrower: '赵六',
-    phone: '13800138004',
-    studentId: '2021004',
-    equipmentName: '护膝',
-    brandName: 'LP',
-    brandModel: '专业护膝',
-    quantity: 2,
-    condition: 'good',
-    borrowDate: '2026-02-23',
-    expectedReturnDate: '2026-03-02',
-    returnTime: '2026-03-01 15:20',
-    status: 'returning',
-    images: [
-      'https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=400'
-    ],
-    remark: '器材完好，已清洗干净'
+const returns = ref([])
+
+// 加载归还申请列表
+const loadReturns = async () => {
+  loading.value = true
+  try {
+    const params = {
+      pageNum: currentPage.value,
+      pageSize: pageSize.value,
+      keyword: searchKeyword.value,
+      status: filterStatus.value
+    }
+    const res = await getReturnApplicationPage(params)
+    returns.value = res.data.records || []
+    total.value = res.data.total || 0
+  } catch (error) {
+    console.error('加载归还申请列表失败:', error)
+    ElMessage.error('加载归还申请列表失败')
+  } finally {
+    loading.value = false
   }
-])
+}
+
+onMounted(() => {
+  loadReturns()
+})
 
 const filteredReturns = computed(() => {
-  return returns.value.filter(ret => {
-    const matchKeyword = !searchKeyword.value || 
-      ret.borrower.includes(searchKeyword.value) || 
-      ret.equipmentName.includes(searchKeyword.value)
-    const matchStatus = !filterStatus.value || ret.status === filterStatus.value
-    const matchDate = !filterDate.value || ret.returnTime.startsWith(formatDate(filterDate.value))
-    return matchKeyword && matchStatus && matchDate
-  })
+  let result = [...returns.value]
+  
+  // 日期筛选
+  if (filterDate.value) {
+    const dateStr = formatDate(filterDate.value)
+    result = result.filter(ret => ret.returnTime && ret.returnTime.startsWith(dateStr))
+  }
+  
+  return result
 })
 
 // 分页后的数据
 const paginatedReturns = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value
-  const end = start + pageSize.value
-  return filteredReturns.value.slice(start, end)
+  return filteredReturns.value
 })
 
 const formatDate = (date) => {
@@ -405,8 +360,8 @@ const getConditionText = (condition) => {
 
 const getStatusType = (status) => {
   const typeMap = {
-    returning: 'warning',
-    returned: 'success',
+    pending: 'warning',
+    approved: 'success',
     rejected: 'danger'
   }
   return typeMap[status] || 'info'
@@ -414,8 +369,8 @@ const getStatusType = (status) => {
 
 const getStatusText = (status) => {
   const textMap = {
-    returning: '待审核',
-    returned: '已归还',
+    pending: '待审核',
+    approved: '已归还',
     rejected: '已拒绝'
   }
   return textMap[status] || status
@@ -430,10 +385,16 @@ const handleApprove = (row) => {
       cancelButtonText: '取消',
       type: 'success'
     }
-  ).then(() => {
-    row.status = 'returned'
-    ElMessage.success('归还审核已通过')
-    detailVisible.value = false
+  ).then(async () => {
+    try {
+      await approveReturnApplication(row.id)
+      ElMessage.success('归还审核已通过')
+      detailVisible.value = false
+      loadReturns()
+    } catch (error) {
+      console.error('通过归还申请失败:', error)
+      ElMessage.error('通过归还申请失败')
+    }
   }).catch(() => {})
 }
 
@@ -446,13 +407,20 @@ const handleReject = (row) => {
 const confirmReject = async () => {
   if (!rejectFormRef.value) return
   
-  await rejectFormRef.value.validate((valid) => {
+  await rejectFormRef.value.validate(async (valid) => {
     if (valid) {
-      rejectingReturn.value.status = 'rejected'
-      rejectingReturn.value.rejectReason = rejectForm.value.reason
-      rejectVisible.value = false
-      detailVisible.value = false
-      ElMessage.success('归还申请已拒绝')
+      try {
+        await rejectReturnApplication(rejectingReturn.value.id, {
+          rejectReason: rejectForm.value.reason
+        })
+        rejectVisible.value = false
+        detailVisible.value = false
+        ElMessage.success('归还申请已拒绝')
+        loadReturns()
+      } catch (error) {
+        console.error('拒绝归还申请失败:', error)
+        ElMessage.error('拒绝归还申请失败')
+      }
     }
   })
 }
@@ -471,14 +439,17 @@ const handleDelete = (row) => {
       cancelButtonText: '取消',
       type: 'warning'
     }
-  ).then(() => {
-    const index = returns.value.findIndex(item => item.id === row.id)
-    if (index !== -1) {
-      returns.value.splice(index, 1)
+  ).then(async () => {
+    try {
+      await deleteReturnApplication(row.id)
       ElMessage.success('记录删除成功')
       if (currentReturn.value?.id === row.id) {
         detailVisible.value = false
       }
+      loadReturns()
+    } catch (error) {
+      console.error('删除记录失败:', error)
+      ElMessage.error('删除记录失败')
     }
   }).catch(() => {})
 }
@@ -487,10 +458,18 @@ const handleDelete = (row) => {
 const handleSizeChange = (val) => {
   pageSize.value = val
   currentPage.value = 1
+  loadReturns()
 }
 
 const handleCurrentChange = (val) => {
   currentPage.value = val
+  loadReturns()
+}
+
+// 监听筛选条件变化
+const handleSearch = () => {
+  currentPage.value = 1
+  loadReturns()
 }
 </script>
 
