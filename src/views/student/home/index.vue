@@ -43,23 +43,59 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ArrowRight } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 import BannerCarousel from './components/BannerCarousel.vue'
 import QuickEntry from './components/QuickEntry.vue'
 import ActivityCard from '@/components/activity-card/index.vue'
 import VenueCard from '@/components/venue-card/index.vue'
-import { activities } from '@/mock/activities'
-import { venues } from '@/mock/venues'
+import { getActivityPage } from '@/api/activity'
+import { getVenuePage } from '@/api/venue'
 
 const router = useRouter()
 
-// 取前12个热门活动
-const hotActivities = ref(activities.slice(0, 12))
+// 热门活动（取9个）
+const hotActivities = ref([])
 
-// 取前6个可预约场地
-const availableVenues = ref(venues.slice(0, 6))
+// 可预约场地（取9个）
+const availableVenues = ref([])
+
+// 加载热门活动
+const loadHotActivities = async () => {
+  try {
+    const res = await getActivityPage({
+      pageNum: 1,
+      pageSize: 9
+      // 不限制状态，查询所有活动
+    })
+    hotActivities.value = res.data.records || []
+  } catch (error) {
+    console.error('加载热门活动失败:', error)
+    ElMessage.error('加载热门活动失败')
+  }
+}
+
+// 加载可预约场地
+const loadAvailableVenues = async () => {
+  try {
+    const res = await getVenuePage({
+      pageNum: 1,
+      pageSize: 9
+      // 不限制状态，查询所有场地
+    })
+    availableVenues.value = res.data.records || []
+  } catch (error) {
+    console.error('加载可预约场地失败:', error)
+    ElMessage.error('加载可预约场地失败')
+  }
+}
+
+onMounted(() => {
+  loadHotActivities()
+  loadAvailableVenues()
+})
 
 const navigate = (path) => {
   router.push(path)
