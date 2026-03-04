@@ -109,7 +109,8 @@ const handleLogin = async () => {
           userId: res.data.userId,
           username: res.data.username,
           name: res.data.name,
-          role: res.data.role
+          role: res.data.role,
+          avatar: res.data.avatar
         })
 
         ElMessage.success('登录成功')

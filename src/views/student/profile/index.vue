@@ -548,6 +548,7 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { User, Camera, Plus } from '@element-plus/icons-vue'
+import { useUserStore } from '@/stores/user'
 import { getMyBorrowRecords, deleteBorrowApplication, createReturnApplication } from '@/api/equipment'
 import { getCurrentStudentInfo, updateStudentInfo, changePassword, updateAvatar, getMyActivityRegistrations, approveActivityRegistration, cancelApprovedRegistration, getMyRegistrations, cancelActivityRegistration, getMyVenueApplications, cancelVenueApplication, deleteVenueApplication } from '@/api/student'
 import { uploadImage } from '@/api/file'
@@ -1199,6 +1200,16 @@ const handleAvatarChange = async (event) => {
     
     // 更新本地显示
     userInfo.value.avatar = avatarUrl
+    
+    // 更新userStore中的头像，使头部栏同步更新
+    const userStore = useUserStore()
+    if (userStore.userInfo) {
+      userStore.setUserInfo({
+        ...userStore.userInfo,
+        avatar: avatarUrl
+      })
+    }
+    
     ElMessage.success('头像上传成功')
   } catch (error) {
     console.error('头像上传失败:', error)
