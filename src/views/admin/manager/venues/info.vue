@@ -414,6 +414,7 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Search } from '@element-plus/icons-vue'
 import { getVenuePage, getVenueById, addVenue, updateVenue, deleteVenue } from '@/api/venue'
+import { uploadImage } from '@/api/file'
 
 const searchKeyword = ref('')
 const filterCategory = ref('')
@@ -679,7 +680,7 @@ const handleEdit = async (row) => {
 }
 
 // 图片上传相关处理
-const handleImageChange = (file, uploadFiles) => {
+const handleImageChange = async (file, uploadFiles) => {
   // 检查文件大小
   if (file.raw && file.raw.size > 2 * 1024 * 1024) {
     ElMessage.warning('图片大小不能超过2MB')
@@ -690,14 +691,16 @@ const handleImageChange = (file, uploadFiles) => {
     return
   }
   
-  // 将图片转换为base64或URL
+  // 上传图片到OSS
   if (file.raw) {
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      const imageUrl = e.target.result
+    try {
+      const res = await uploadImage(file.raw, 'venue')
+      const imageUrl = res.data
+      
       if (!formData.value.images) {
         formData.value.images = []
       }
+      
       // 找到对应的文件索引
       const fileIndex = fileList.value.findIndex(f => f.uid === file.uid)
       if (fileIndex > -1) {
@@ -708,8 +711,17 @@ const handleImageChange = (file, uploadFiles) => {
           formData.value.images.push(imageUrl)
         }
       }
+      
+      ElMessage.success('图片上传成功')
+    } catch (error) {
+      console.error('图片上传失败:', error)
+      ElMessage.error(error.message || '图片上传失败')
+      // 上传失败，从列表中移除
+      const index = uploadFiles.findIndex(f => f.uid === file.uid)
+      if (index > -1) {
+        uploadFiles.splice(index, 1)
+      }
     }
-    reader.readAsDataURL(file.raw)
   }
 }
 

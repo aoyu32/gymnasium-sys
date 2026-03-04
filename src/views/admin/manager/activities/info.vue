@@ -347,6 +347,7 @@ import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Search } from '@element-plus/icons-vue'
 import { getActivityPage, createActivity, updateActivity, deleteActivity, getActivityById } from '@/api/activity'
+import { uploadImage } from '@/api/file'
 
 const searchKeyword = ref('')
 const filterCategory = ref('')
@@ -699,15 +700,17 @@ const beforeImageUpload = (file) => {
 }
 
 // 自定义图片上传
-const handleImageUpload = (options) => {
+const handleImageUpload = async (options) => {
   const { file } = options
-  // 这里模拟上传，实际项目中应该调用上传API
-  const reader = new FileReader()
-  reader.onload = (e) => {
-    formData.value.image = e.target.result
+  try {
+    // 调用后端文件上传接口
+    const res = await uploadImage(file, 'activity')
+    formData.value.image = res.data
     ElMessage.success('图片上传成功')
+  } catch (error) {
+    console.error('图片上传失败:', error)
+    ElMessage.error(error.message || '图片上传失败')
   }
-  reader.readAsDataURL(file)
 }
 </script>
 
