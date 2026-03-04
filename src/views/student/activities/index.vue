@@ -309,6 +309,7 @@ import {
 } from '@element-plus/icons-vue'
 import ActivityCard from '@/components/activity-card/index.vue'
 import { getActivityPage, createActivity, getMyActivities, updateActivity, deleteActivity } from '@/api/activity'
+import { uploadImage } from '@/api/file'
 
 const activeCategory = ref('all')
 const loading = ref(false)
@@ -519,25 +520,31 @@ const beforeImageUpload = (file) => {
   return true
 }
 
-const handleImageUpload = (options) => {
+const handleImageUpload = async (options) => {
   const { file } = options
-  const reader = new FileReader()
-  reader.onload = (e) => {
-    createForm.value.imageUrl = e.target.result
+  try {
+    // 调用后端文件上传接口
+    const res = await uploadImage(file, 'activity')
+    createForm.value.imageUrl = res.data
     ElMessage.success('图片上传成功')
+  } catch (error) {
+    console.error('图片上传失败:', error)
+    ElMessage.error(error.message || '图片上传失败')
   }
-  reader.readAsDataURL(file)
   return Promise.resolve()
 }
 
-const handleEditImageUpload = (options) => {
+const handleEditImageUpload = async (options) => {
   const { file } = options
-  const reader = new FileReader()
-  reader.onload = (e) => {
-    editForm.value.imageUrl = e.target.result
+  try {
+    // 调用后端文件上传接口
+    const res = await uploadImage(file, 'activity')
+    editForm.value.imageUrl = res.data
     ElMessage.success('图片上传成功')
+  } catch (error) {
+    console.error('图片上传失败:', error)
+    ElMessage.error(error.message || '图片上传失败')
   }
-  reader.readAsDataURL(file)
   return Promise.resolve()
 }
 
