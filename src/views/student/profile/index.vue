@@ -75,7 +75,7 @@
         <el-col :span="18">
           <el-tabs v-model="activeTab">
             <!-- 私人活动申请记录 -->
-            <el-tab-pane label="私人活动" name="privateActivities">
+            <el-tab-pane label="我创建的活动" name="privateActivities">
               <el-table :data="privateActivityApplications" stripe @row-click="handleViewApplicationDetail">
                 <el-table-column prop="applicantName" label="申请人" width="100" />
                 <el-table-column prop="activityName" label="活动名称" show-overflow-tooltip />
@@ -87,7 +87,7 @@
                     <el-tag :type="getStatusType(row.status)">{{ row.statusText }}</el-tag>
                   </template>
                 </el-table-column>
-                <el-table-column label="操作" width="280" fixed="right">
+                <el-table-column label="操作" width="240" fixed="right">
                   <template #default="{ row }">
                     <el-button 
                       v-if="row.status === 'pending'" 
@@ -108,12 +108,13 @@
                       拒绝
                     </el-button>
                     <el-button 
+                      v-if="row.status === 'approved'" 
                       link
-                      type="danger" 
+                      type="warning" 
                       size="small"
-                      @click.stop="handleCancelActivity(row)"
+                      @click.stop="handleCancelApproval(row)"
                     >
-                      取消活动
+                      取消通过
                     </el-button>
                     <el-button 
                       link
@@ -129,7 +130,7 @@
             </el-tab-pane>
 
             <!-- 活动预约记录 -->
-            <el-tab-pane label="活动预约记录" name="activityBookings">
+            <el-tab-pane label="我预约的活动" name="activityBookings">
               <el-table :data="activityBookings" stripe @row-click="handleViewBookingDetail">
                 <el-table-column prop="activityName" label="活动名称" show-overflow-tooltip />
                 <el-table-column prop="activityType" label="活动类型" width="100">
@@ -172,7 +173,7 @@
             </el-tab-pane>
 
             <!-- 场地申请记录 -->
-            <el-tab-pane label="场地申请记录" name="venueBookings">
+            <el-tab-pane label="我的场地申请" name="venueBookings">
               <el-table :data="venueBookings" stripe @row-click="handleViewVenueDetail">
                 <el-table-column prop="venueName" label="场地名称" />
                 <el-table-column prop="date" label="使用日期" />
@@ -210,7 +211,7 @@
             </el-tab-pane>
 
             <!-- 器材借还记录 -->
-            <el-tab-pane label="器材借还记录" name="equipmentRecords">
+            <el-tab-pane label="器材借还" name="equipmentRecords">
               <el-table :data="equipmentRecords" stripe @row-click="handleViewEquipmentDetail">
                 <el-table-column prop="equipmentName" label="器材名称" width="120" />
                 <el-table-column prop="brand" label="品牌规格" min-width="180" show-overflow-tooltip />
@@ -368,15 +369,15 @@
     >
       <el-descriptions :column="1" border v-if="currentApplication">
         <el-descriptions-item label="申请人">{{ currentApplication.applicantName }}</el-descriptions-item>
+        <el-descriptions-item label="学号">{{ currentApplication.studentId }}</el-descriptions-item>
+        <el-descriptions-item label="学院">{{ currentApplication.college }}</el-descriptions-item>
         <el-descriptions-item label="活动名称">{{ currentApplication.activityName }}</el-descriptions-item>
         <el-descriptions-item label="联系方式">{{ currentApplication.phone }}</el-descriptions-item>
+        <el-descriptions-item label="邮箱">{{ currentApplication.email }}</el-descriptions-item>
         <el-descriptions-item label="申请时间">{{ currentApplication.applyTime }}</el-descriptions-item>
         <el-descriptions-item label="申请理由">{{ currentApplication.reason }}</el-descriptions-item>
         <el-descriptions-item label="申请状态">
           <el-tag :type="getStatusType(currentApplication.status)">{{ currentApplication.statusText }}</el-tag>
-        </el-descriptions-item>
-        <el-descriptions-item v-if="currentApplication.rejectReason" label="拒绝原因">
-          {{ currentApplication.rejectReason }}
         </el-descriptions-item>
       </el-descriptions>
       <template #footer>
@@ -397,9 +398,13 @@
             {{ currentBooking.activityType }}
           </el-tag>
         </el-descriptions-item>
+        <el-descriptions-item label="活动分类">{{ currentBooking.category }}</el-descriptions-item>
         <el-descriptions-item label="活动日期">{{ currentBooking.date }}</el-descriptions-item>
         <el-descriptions-item label="活动时间">{{ currentBooking.time }}</el-descriptions-item>
         <el-descriptions-item label="活动地点">{{ currentBooking.location }}</el-descriptions-item>
+        <el-descriptions-item label="活动组织者">{{ currentBooking.creatorName }}</el-descriptions-item>
+        <el-descriptions-item label="参与人数">{{ currentBooking.currentParticipants }} / {{ currentBooking.maxParticipants }}</el-descriptions-item>
+        <el-descriptions-item label="活动描述">{{ currentBooking.description || '无' }}</el-descriptions-item>
         <el-descriptions-item label="预约状态">
           <el-tag :type="getStatusType(currentBooking.status)">{{ currentBooking.statusText }}</el-tag>
         </el-descriptions-item>
@@ -536,7 +541,7 @@ import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { User, Camera, Plus } from '@element-plus/icons-vue'
 import { getMyBorrowRecords, deleteBorrowApplication, createReturnApplication } from '@/api/equipment'
-import { getCurrentStudentInfo, updateStudentInfo, changePassword, updateAvatar } from '@/api/student'
+import { getCurrentStudentInfo, updateStudentInfo, changePassword, updateAvatar, getMyActivityRegistrations, approveActivityRegistration, cancelApprovedRegistration, getMyRegistrations, cancelActivityRegistration, getMyVenueApplications, cancelVenueApplication, deleteVenueApplication } from '@/api/student'
 import { uploadImage } from '@/api/file'
 
 const activeTab = ref('privateActivities')
@@ -623,100 +628,146 @@ const userInfo = ref({
 const editForm = ref({ ...userInfo.value })
 
 // 私人活动申请记录（别人申请参加我的活动）
-const privateActivityApplications = ref([
-  {
-    id: 1,
-    applicantName: '李四',
-    activityName: '周末篮球友谊赛',
-    applyTime: '2026-02-24 10:30',
-    phone: '138****6666',
-    reason: '热爱篮球运动，希望能参加',
-    status: 'pending',
-    statusText: '待审核'
-  },
-  {
-    id: 2,
-    applicantName: '王五',
-    activityName: '周末篮球友谊赛',
-    applyTime: '2026-02-24 11:00',
-    phone: '139****7777',
-    reason: '想提高篮球技术',
-    status: 'approved',
-    statusText: '已通过'
-  },
-  {
-    id: 3,
-    applicantName: '赵六',
-    activityName: '羽毛球训练营',
-    applyTime: '2026-02-23 15:20',
-    phone: '137****8888',
-    reason: '想学习羽毛球',
-    status: 'rejected',
-    statusText: '已拒绝'
+const privateActivityApplications = ref([])
+
+// 加载私人活动申请记录
+const loadPrivateActivityApplications = async () => {
+  try {
+    const res = await getMyActivityRegistrations({
+      pageNum: 1,
+      pageSize: 100
+    })
+    
+    privateActivityApplications.value = (res.data?.records || []).map(item => ({
+      id: item.id,
+      activityId: item.activityId,
+      userId: item.userId,
+      applicantName: item.userName || '未知',
+      activityName: item.activityName || '未知活动',
+      applyTime: item.createdAt || '',
+      phone: item.userPhone || '未设置',
+      email: item.userEmail || '未设置',
+      studentId: item.studentId || '未知',
+      college: item.college || '未设置',
+      reason: item.reason || '无',
+      status: item.approvalStatus,
+      statusText: getApplicationStatusText(item.approvalStatus)
+    }))
+  } catch (error) {
+    console.error('加载私人活动申请记录失败:', error)
+    ElMessage.error('加载私人活动申请记录失败')
   }
-])
+}
+
+const getApplicationStatusText = (status) => {
+  const textMap = {
+    pending: '待审核',
+    approved: '已通过',
+    rejected: '已拒绝'
+  }
+  return textMap[status] || status
+}
 
 // 活动预约记录（我参加别人的活动）
-const activityBookings = ref([
-  {
-    id: 1,
-    activityName: '篮球友谊赛',
-    activityType: '公共',
-    date: '2026-02-26',
-    time: '14:00-16:00',
-    location: '篮球馆A场',
-    status: 'approved',
-    statusText: '已通过'
-  },
-  {
-    id: 2,
-    activityName: '足球比赛',
-    activityType: '私人',
-    date: '2026-02-27',
-    time: '15:00-17:00',
-    location: '足球场',
-    status: 'pending',
-    statusText: '待审核'
+const activityBookings = ref([])
+
+// 加载活动预约记录
+const loadActivityBookings = async () => {
+  try {
+    const res = await getMyRegistrations({
+      pageNum: 1,
+      pageSize: 100
+    })
+    
+    activityBookings.value = (res.data?.records || []).map(item => {
+      // 格式化日期时间
+      const activityTime = item.activityTime ? new Date(item.activityTime) : null
+      const date = activityTime ? activityTime.toLocaleDateString('zh-CN') : '未知'
+      const time = activityTime ? activityTime.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }) : '未知'
+      
+      return {
+        id: item.id,
+        activityId: item.id,
+        activityName: item.title || '未知活动',
+        activityType: item.activityType === 'public' ? '公共' : '私人',
+        date: date,
+        time: time,
+        location: item.venueName ? `${item.venueName}${item.areaName ? ' - ' + item.areaName : ''}` : '未知',
+        venueName: item.venueName || '未知',
+        areaName: item.areaName || '',
+        category: item.category || '未知',
+        description: item.description || '',
+        maxParticipants: item.maxParticipants || 0,
+        currentParticipants: item.currentParticipants || 0,
+        creatorName: item.creatorName || '未知',
+        status: item.approvalStatus || 'pending',
+        statusText: getActivityBookingStatusText(item.approvalStatus)
+      }
+    })
+  } catch (error) {
+    console.error('加载活动预约记录失败:', error)
+    ElMessage.error('加载活动预约记录失败')
   }
-])
+}
+
+const getActivityBookingStatusText = (status) => {
+  const textMap = {
+    pending: '待审核',
+    approved: '已通过',
+    rejected: '已拒绝'
+  }
+  return textMap[status] || status
+}
 
 // 场地申请记录
-const venueBookings = ref([
-  {
-    id: 1,
-    venueId: 1,
-    venueName: '篮球馆A场',
-    areaName: 'A1场地',
-    date: '2026-02-25',
-    time: '18:00-20:00',
-    activityType: '篮球',
-    participants: 10,
-    status: 'approved',
-    statusText: '已通过',
-    applicantName: '张三',
-    phone: '13800138000',
-    studentId: '2021001',
-    reason: '组织班级篮球活动，增强同学们的体质和团队协作能力。',
-    applyTime: '2026-02-20 10:30:00'
-  },
-  {
-    id: 2,
-    venueId: 2,
-    venueName: '羽毛球馆',
-    areaName: '1号场地',
-    date: '2026-02-26',
-    time: '16:00-18:00',
-    activityType: '羽毛球',
-    participants: 8,
-    status: 'pending',
-    statusText: '待审批',
-    applicantName: '张三',
-    phone: '13800138000',
-    studentId: '2021001',
-    reason: '羽毛球社团日常训练活动。',
-    applyTime: '2026-02-22 15:20:00'
+const venueBookings = ref([])
+
+// 加载场地申请记录
+const loadVenueBookings = async () => {
+  try {
+    const res = await getMyVenueApplications({
+      pageNum: 1,
+      pageSize: 100
+    })
+    
+    venueBookings.value = (res.data?.records || []).map(item => {
+      // 格式化日期
+      const usageDate = item.usageDate || ''
+      
+      return {
+        id: item.id,
+        venueId: item.venueId,
+        venueName: item.venueName || '未知场地',
+        areaName: item.areaName || '',
+        date: usageDate,
+        time: item.timeSlot || '未知',
+        activityType: item.activityType || '未知',
+        participants: item.participants || 0,
+        status: item.status,
+        statusText: getVenueApplicationStatusText(item.status),
+        applicantName: item.applicantName || '未知',
+        phone: item.phone || '未设置',
+        studentId: item.studentId || '未知',
+        reason: item.reason || '无',
+        applyTime: item.createdAt || '',
+        rejectReason: item.rejectReason || ''
+      }
+    })
+  } catch (error) {
+    console.error('加载场地申请记录失败:', error)
+    ElMessage.error('加载场地申请记录失败')
   }
-])
+}
+
+const getVenueApplicationStatusText = (status) => {
+  const textMap = {
+    pending: '待审批',
+    approved: '已通过',
+    rejected: '已拒绝',
+    cancelled: '已取消'
+  }
+  return textMap[status] || status
+}
 
 const equipmentRecords = ref([])
 
@@ -778,6 +829,9 @@ const getEquipmentStatusText = (status) => {
 onMounted(() => {
   loadStudentInfo()
   loadEquipmentRecords()
+  loadPrivateActivityApplications()
+  loadActivityBookings()
+  loadVenueBookings()
 })
 
 const handleSave = async () => {
@@ -828,45 +882,59 @@ const getActivityStatusType = (status) => {
 }
 
 // 私人活动相关
-const handleCancelActivity = (activity) => {
-  ElMessageBox.confirm(`确定取消活动"${activity.activityName}"吗？取消后所有申请将被拒绝。`, '提示', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    type: 'warning'
-  }).then(() => {
-    ElMessage.success('活动已取消')
-    // TODO: 调用API取消活动
-  }).catch(() => {})
-}
-
 const handleViewApplicationDetail = (row) => {
   currentApplication.value = row
   applicationDetailVisible.value = true
 }
 
-const handleApprove = (application) => {
+const handleApprove = async (application) => {
   ElMessageBox.confirm(`确定通过 ${application.applicantName} 的申请吗？`, '提示', {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
     type: 'success'
-  }).then(() => {
-    application.status = 'approved'
-    application.statusText = '已通过'
-    ElMessage.success('已通过申请')
+  }).then(async () => {
+    try {
+      await approveActivityRegistration(application.activityId, application.userId, true)
+      ElMessage.success('已通过申请')
+      loadPrivateActivityApplications()
+    } catch (error) {
+      console.error('审核失败:', error)
+      ElMessage.error(error.message || '审核失败')
+    }
   }).catch(() => {})
 }
 
-const handleReject = (application) => {
-  ElMessageBox.prompt('请输入拒绝原因', '拒绝申请', {
+const handleReject = async (application) => {
+  ElMessageBox.confirm(`确定拒绝 ${application.applicantName} 的申请吗？`, '提示', {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
-    inputPattern: /.+/,
-    inputErrorMessage: '请输入拒绝原因'
-  }).then(({ value }) => {
-    application.status = 'rejected'
-    application.statusText = '已拒绝'
-    application.rejectReason = value
-    ElMessage.success('已拒绝申请')
+    type: 'warning'
+  }).then(async () => {
+    try {
+      await approveActivityRegistration(application.activityId, application.userId, false)
+      ElMessage.success('已拒绝申请')
+      loadPrivateActivityApplications()
+    } catch (error) {
+      console.error('审核失败:', error)
+      ElMessage.error(error.message || '审核失败')
+    }
+  }).catch(() => {})
+}
+
+const handleCancelApproval = async (application) => {
+  ElMessageBox.confirm(`确定取消 ${application.applicantName} 的通过状态吗？取消后将变为待审核状态。`, '提示', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning'
+  }).then(async () => {
+    try {
+      await cancelApprovedRegistration(application.activityId, application.userId)
+      ElMessage.success('已取消通过')
+      loadPrivateActivityApplications()
+    } catch (error) {
+      console.error('取消通过失败:', error)
+      ElMessage.error(error.message || '取消通过失败')
+    }
   }).catch(() => {})
 }
 
@@ -876,6 +944,7 @@ const handleDeleteApplication = (application) => {
     cancelButtonText: '取消',
     type: 'warning'
   }).then(() => {
+    // TODO: 调用后端删除接口
     const index = privateActivityApplications.value.findIndex(item => item.id === application.id)
     if (index > -1) {
       privateActivityApplications.value.splice(index, 1)
@@ -890,13 +959,20 @@ const handleViewBookingDetail = (row) => {
   bookingDetailVisible.value = true
 }
 
-const handleCancelBooking = (booking) => {
+const handleCancelBooking = async (booking) => {
   ElMessageBox.confirm(`确定取消参加"${booking.activityName}"吗？`, '提示', {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
     type: 'warning'
-  }).then(() => {
-    ElMessage.success('已取消参加')
+  }).then(async () => {
+    try {
+      await cancelActivityRegistration(booking.activityId)
+      ElMessage.success('已取消参加')
+      loadActivityBookings()
+    } catch (error) {
+      console.error('取消参加失败:', error)
+      ElMessage.error(error.message || '取消参加失败')
+    }
   }).catch(() => {})
 }
 
@@ -906,6 +982,7 @@ const handleDeleteBooking = (booking) => {
     cancelButtonText: '取消',
     type: 'warning'
   }).then(() => {
+    // TODO: 调用后端删除接口
     const index = activityBookings.value.findIndex(item => item.id === booking.id)
     if (index > -1) {
       activityBookings.value.splice(index, 1)
@@ -920,27 +997,36 @@ const handleViewVenueDetail = (row) => {
   venueDetailVisible.value = true
 }
 
-const handleCancelVenue = (venue) => {
+const handleCancelVenue = async (venue) => {
   ElMessageBox.confirm(`确定取消"${venue.venueName}"的申请吗？`, '提示', {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
     type: 'warning'
-  }).then(() => {
-    ElMessage.success('已取消申请')
-    // TODO: 调用API取消申请
+  }).then(async () => {
+    try {
+      await cancelVenueApplication(venue.id)
+      ElMessage.success('已取消申请')
+      loadVenueBookings()
+    } catch (error) {
+      console.error('取消申请失败:', error)
+      ElMessage.error(error.message || '取消申请失败')
+    }
   }).catch(() => {})
 }
 
-const handleDeleteVenue = (venue) => {
+const handleDeleteVenue = async (venue) => {
   ElMessageBox.confirm(`确定删除"${venue.venueName}"的申请记录吗？`, '提示', {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
     type: 'warning'
-  }).then(() => {
-    const index = venueBookings.value.findIndex(item => item.id === venue.id)
-    if (index > -1) {
-      venueBookings.value.splice(index, 1)
+  }).then(async () => {
+    try {
+      await deleteVenueApplication(venue.id)
       ElMessage.success('删除成功')
+      loadVenueBookings()
+    } catch (error) {
+      console.error('删除记录失败:', error)
+      ElMessage.error(error.message || '删除记录失败')
     }
   }).catch(() => {})
 }
