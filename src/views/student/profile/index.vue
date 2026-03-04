@@ -79,7 +79,11 @@
               <el-table :data="privateActivityApplications" stripe @row-click="handleViewApplicationDetail">
                 <el-table-column prop="applicantName" label="申请人" width="100" />
                 <el-table-column prop="activityName" label="活动名称" show-overflow-tooltip />
-                <el-table-column prop="applyTime" label="申请时间" width="160" />
+                <el-table-column prop="applyTime" label="申请时间" width="160">
+                  <template #default="{ row }">
+                    {{ formatDateTime(row.applyTime) }}
+                  </template>
+                </el-table-column>
                 <el-table-column prop="phone" label="联系方式" width="120" />
                 <el-table-column prop="reason" label="申请理由" show-overflow-tooltip />
                 <el-table-column prop="status" label="状态" width="100">
@@ -178,7 +182,11 @@
                 <el-table-column prop="venueName" label="场地名称" />
                 <el-table-column prop="date" label="使用日期" />
                 <el-table-column prop="time" label="使用时段" />
-                <el-table-column prop="activityType" label="活动类型" />
+                <el-table-column prop="activityType" label="活动类型">
+                  <template #default="{ row }">
+                    {{ getActivityTypeText(row.activityType) }}
+                  </template>
+                </el-table-column>
                 <el-table-column prop="participants" label="参与人数" width="100" />
                 <el-table-column prop="status" label="状态" width="100">
                   <template #default="{ row }">
@@ -374,7 +382,7 @@
         <el-descriptions-item label="活动名称">{{ currentApplication.activityName }}</el-descriptions-item>
         <el-descriptions-item label="联系方式">{{ currentApplication.phone }}</el-descriptions-item>
         <el-descriptions-item label="邮箱">{{ currentApplication.email }}</el-descriptions-item>
-        <el-descriptions-item label="申请时间">{{ currentApplication.applyTime }}</el-descriptions-item>
+        <el-descriptions-item label="申请时间">{{ formatDateTime(currentApplication.applyTime) }}</el-descriptions-item>
         <el-descriptions-item label="申请理由">{{ currentApplication.reason }}</el-descriptions-item>
         <el-descriptions-item label="申请状态">
           <el-tag :type="getStatusType(currentApplication.status)">{{ currentApplication.statusText }}</el-tag>
@@ -425,7 +433,7 @@
         <el-descriptions-item label="场地区域">{{ currentVenue.areaName || '无区域划分' }}</el-descriptions-item>
         <el-descriptions-item label="使用日期">{{ currentVenue.date }}</el-descriptions-item>
         <el-descriptions-item label="使用时段">{{ currentVenue.time }}</el-descriptions-item>
-        <el-descriptions-item label="活动类型">{{ currentVenue.activityType }}</el-descriptions-item>
+        <el-descriptions-item label="活动类型">{{ getActivityTypeText(currentVenue.activityType) }}</el-descriptions-item>
         <el-descriptions-item label="参与人数">{{ currentVenue.participants }}人</el-descriptions-item>
         <el-descriptions-item label="申请人姓名">{{ currentVenue.applicantName || '张三' }}</el-descriptions-item>
         <el-descriptions-item label="联系电话">{{ currentVenue.phone || '13800138000' }}</el-descriptions-item>
@@ -732,7 +740,7 @@ const loadVenueBookings = async () => {
     
     venueBookings.value = (res.data?.records || []).map(item => {
       // 格式化日期
-      const usageDate = item.usageDate || ''
+      const usageDate = item.applyDate || ''
       
       return {
         id: item.id,
@@ -746,9 +754,9 @@ const loadVenueBookings = async () => {
         status: item.status,
         statusText: getVenueApplicationStatusText(item.status),
         applicantName: item.applicantName || '未知',
-        phone: item.phone || '未设置',
-        studentId: item.studentId || '未知',
-        reason: item.reason || '无',
+        phone: item.applicantPhone || '未设置',
+        studentId: item.applicantStudentId || '未知',
+        reason: item.description || '无',
         applyTime: item.createdAt || '',
         rejectReason: item.rejectReason || ''
       }
@@ -767,6 +775,36 @@ const getVenueApplicationStatusText = (status) => {
     cancelled: '已取消'
   }
   return textMap[status] || status
+}
+
+// 活动类型中英文转换
+const getActivityTypeText = (type) => {
+  const typeMap = {
+    basketball: '篮球',
+    football: '足球',
+    volleyball: '排球',
+    badminton: '羽毛球',
+    'table-tennis': '乒乓球',
+    tennis: '网球',
+    swimming: '游泳',
+    fitness: '健身',
+    yoga: '瑜伽',
+    dance: '舞蹈',
+    other: '其他'
+  }
+  return typeMap[type] || type
+}
+
+// 格式化日期时间
+const formatDateTime = (dateTime) => {
+  if (!dateTime) return ''
+  const date = new Date(dateTime)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  return `${year}-${month}-${day} ${hours}:${minutes}`
 }
 
 const equipmentRecords = ref([])
