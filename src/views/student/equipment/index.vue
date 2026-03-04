@@ -14,22 +14,26 @@
       <el-tab-pane label="借用记录" name="records">
         <el-table :data="borrowRecords" stripe>
           <el-table-column prop="equipmentName" label="器材名称" width="120" />
-          <el-table-column prop="brand" label="品牌规格" min-width="180" show-overflow-tooltip />
-          <el-table-column prop="quantity" label="数量" width="80" align="center" />
-          <el-table-column prop="borrowDate" label="借用日期" width="120" />
-          <el-table-column prop="returnDate" label="应还日期" width="120" />
-          <el-table-column prop="status" label="状态" width="120" align="center">
+          <el-table-column label="品牌规格" min-width="180" show-overflow-tooltip>
             <template #default="{ row }">
-              <el-tag :type="getStatusType(row.status)">{{ row.statusText }}</el-tag>
+              {{ row.brandName ? `${row.brandName} ${row.brandModel || ''}` : '-' }}
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="240" fixed="right">
+          <el-table-column prop="quantity" label="数量" width="80" align="center" />
+          <el-table-column prop="borrowDate" label="借用日期" width="120" />
+          <el-table-column prop="expectedReturnDate" label="应还日期" width="120" />
+          <el-table-column prop="status" label="状态" width="120" align="center">
+            <template #default="{ row }">
+              <el-tag :type="getStatusType(row.status)">{{ getStatusText(row.status) }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="200" fixed="right">
             <template #default="{ row }">
               <el-button link type="primary" size="small" @click="handleViewDetail(row)">查看详情</el-button>
               <el-button
-                v-if="row.status === 'borrowed'"
+                v-if="row.status === 'approved'"
                 link
-                type="danger"
+                type="warning"
                 size="small"
                 @click="handleReturn(row)"
               >
@@ -66,16 +70,18 @@
     >
       <el-descriptions :column="1" border v-if="currentRecord">
         <el-descriptions-item label="器材名称">{{ currentRecord.equipmentName }}</el-descriptions-item>
-        <el-descriptions-item label="品牌规格">{{ currentRecord.brand }}</el-descriptions-item>
+        <el-descriptions-item label="品牌规格">
+          {{ currentRecord.brandName ? `${currentRecord.brandName} ${currentRecord.brandModel || ''}` : '-' }}
+        </el-descriptions-item>
         <el-descriptions-item label="借用数量">{{ currentRecord.quantity }}件</el-descriptions-item>
         <el-descriptions-item label="借用日期">{{ currentRecord.borrowDate }}</el-descriptions-item>
-        <el-descriptions-item label="应还日期">{{ currentRecord.returnDate }}</el-descriptions-item>
-        <el-descriptions-item label="借用人">{{ currentRecord.borrower || '张三' }}</el-descriptions-item>
-        <el-descriptions-item label="联系电话">{{ currentRecord.phone || '13800138000' }}</el-descriptions-item>
-        <el-descriptions-item label="学号/工号">{{ currentRecord.studentId || '2021001' }}</el-descriptions-item>
-        <el-descriptions-item label="借用理由">{{ currentRecord.reason || '体育课使用' }}</el-descriptions-item>
+        <el-descriptions-item label="应还日期">{{ currentRecord.expectedReturnDate }}</el-descriptions-item>
+        <el-descriptions-item label="借用人">{{ currentRecord.borrower }}</el-descriptions-item>
+        <el-descriptions-item label="联系电话">{{ currentRecord.phone }}</el-descriptions-item>
+        <el-descriptions-item label="学号/工号">{{ currentRecord.studentId }}</el-descriptions-item>
+        <el-descriptions-item label="借用理由">{{ currentRecord.reason }}</el-descriptions-item>
         <el-descriptions-item label="借用状态">
-          <el-tag :type="getStatusType(currentRecord.status)">{{ currentRecord.statusText }}</el-tag>
+          <el-tag :type="getStatusType(currentRecord.status)">{{ getStatusText(currentRecord.status) }}</el-tag>
         </el-descriptions-item>
         <el-descriptions-item v-if="currentRecord.status === 'returned'" label="归还日期">
           {{ currentRecord.actualReturnDate || '-' }}
@@ -152,13 +158,13 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import EquipmentFilter from './components/EquipmentFilter.vue'
 import EquipmentList from './components/EquipmentList.vue'
-import { equipments } from '@/mock/equipments'
+import { getEquipmentPage, getMyBorrowRecords, deleteBorrowApplication, createReturnApplication } from '@/api/equipment'
 
 const router = useRouter()
 const activeTab = ref('borrow')
@@ -173,6 +179,10 @@ const filters = ref({
   category: '',
   status: ''
 })
+
+// 器材列表
+const equipments = ref([])
+const loading = ref(false)
 
 // 归还表单
 const returnForm = ref({
@@ -190,23 +200,36 @@ const returnRules = {
   ]
 }
 
+// 加载器材列表
+const loadEquipments = async () => {
+  loading.value = true
+  try {
+    const params = {
+      pageNum: 1,
+      pageSize: 100,
+      keyword: filters.value.searchKeyword,
+      category: filters.value.category
+    }
+    const res = await getEquipmentPage(params)
+    equipments.value = res.data.records || []
+  } catch (error) {
+    console.error('加载器材列表失败:', error)
+    ElMessage.error('加载器材列表失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+// 监听过滤条件变化
+watch(() => [filters.value.searchKeyword, filters.value.category], () => {
+  loadEquipments()
+}, { deep: true })
+
 // 筛选后的器材列表
 const filteredEquipments = computed(() => {
-  let result = [...equipments]
+  let result = [...equipments.value]
   
-  // 搜索筛选
-  if (filters.value.searchKeyword) {
-    result = result.filter(item => 
-      item.name.toLowerCase().includes(filters.value.searchKeyword.toLowerCase())
-    )
-  }
-  
-  // 分类筛选
-  if (filters.value.category) {
-    result = result.filter(item => item.category === filters.value.category)
-  }
-  
-  // 状态筛选
+  // 状态筛选（前端筛选）
   if (filters.value.status) {
     if (filters.value.status === 'available') {
       result = result.filter(item => item.stock > 0)
@@ -218,54 +241,23 @@ const filteredEquipments = computed(() => {
   return result
 })
 
-const borrowRecords = ref([
-  {
-    id: 1,
-    equipmentId: 1,
-    equipmentName: '篮球',
-    brand: '斯伯丁 NBA官方用球',
-    quantity: 2,
-    borrowDate: '2026-02-20',
-    returnDate: '2026-02-27',
-    status: 'borrowed',
-    statusText: '借用中',
-    borrower: '张三',
-    phone: '13800138000',
-    studentId: '2021001',
-    reason: '班级篮球比赛使用'
-  },
-  {
-    id: 2,
-    equipmentId: 2,
-    equipmentName: '羽毛球拍',
-    brand: '尤尼克斯 NANORAY系列',
-    quantity: 1,
-    borrowDate: '2026-02-15',
-    returnDate: '2026-02-22',
-    status: 'returned',
-    statusText: '已归还',
-    borrower: '李四',
-    phone: '13900139000',
-    studentId: '2021002',
-    reason: '体育课使用',
-    actualReturnDate: '2026-02-21'
-  },
-  {
-    id: 3,
-    equipmentId: 4,
-    equipmentName: '足球',
-    brand: '阿迪达斯 世界杯用球',
-    quantity: 1,
-    borrowDate: '2026-02-10',
-    returnDate: '2026-02-17',
-    status: 'overdue',
-    statusText: '已逾期',
-    borrower: '王五',
-    phone: '13700137000',
-    studentId: '2021003',
-    reason: '足球社团训练'
+const borrowRecords = ref([])
+
+// 加载借用记录
+const loadBorrowRecords = async () => {
+  try {
+    const res = await getMyBorrowRecords()
+    borrowRecords.value = res.data || []
+  } catch (error) {
+    console.error('加载借用记录失败:', error)
+    ElMessage.error('加载借用记录失败')
   }
-])
+}
+
+onMounted(() => {
+  loadEquipments()
+  loadBorrowRecords()
+})
 
 const handleResetFilter = () => {
   filters.value = {
@@ -273,6 +265,7 @@ const handleResetFilter = () => {
     category: '',
     status: ''
   }
+  loadEquipments()
 }
 
 const handleViewDetail = (row) => {
@@ -288,7 +281,10 @@ const goToEquipmentDetail = () => {
 }
 
 const handleReturn = (row) => {
-  currentReturnRecord.value = { ...row }
+  currentReturnRecord.value = { 
+    ...row,
+    brand: row.brandName ? `${row.brandName} ${row.brandModel || ''}` : '-'
+  }
   returnForm.value = {
     images: [],
     condition: 'good',
@@ -300,28 +296,37 @@ const handleReturn = (row) => {
 const confirmReturn = async () => {
   if (!returnFormRef.value) return
   
-  await returnFormRef.value.validate((valid) => {
+  await returnFormRef.value.validate(async (valid) => {
     if (valid) {
       if (returnForm.value.images.length === 0) {
         ElMessage.warning('请上传器材照片')
         return
       }
       
-      ElMessage.success('归还申请已提交，请等待审核')
-      returnDialogVisible.value = false
-      
-      // 更新记录状态为审核中
-      const record = borrowRecords.value.find(item => item.id === currentReturnRecord.value.id)
-      if (record) {
-        record.status = 'returning'
-        record.statusText = '归还审核中'
+      try {
+        // 提取图片URL（实际项目中需要先上传图片到服务器）
+        const imageUrls = returnForm.value.images.map(file => {
+          // 如果是文件对象，需要上传后获取URL
+          // 这里暂时使用模拟URL
+          return file.url || 'https://via.placeholder.com/400'
+        })
+        
+        await createReturnApplication({
+          borrowId: currentReturnRecord.value.id,
+          condition: returnForm.value.condition,
+          remark: returnForm.value.remark,
+          images: imageUrls
+        })
+        
+        ElMessage.success('归还申请已提交，请等待审核')
+        returnDialogVisible.value = false
+        
+        // 重新加载借用记录
+        loadBorrowRecords()
+      } catch (error) {
+        console.error('提交归还申请失败:', error)
+        ElMessage.error('提交归还申请失败')
       }
-      
-      // 这里后期对接API，上传照片和表单数据
-      console.log('归还信息:', {
-        ...currentReturnRecord.value,
-        ...returnForm.value
-      })
     }
   })
 }
@@ -331,24 +336,38 @@ const handleDelete = (row) => {
     confirmButtonText: '确认',
     cancelButtonText: '取消',
     type: 'warning'
-  }).then(() => {
-    const index = borrowRecords.value.findIndex(item => item.id === row.id)
-    if (index > -1) {
-      borrowRecords.value.splice(index, 1)
+  }).then(async () => {
+    try {
+      await deleteBorrowApplication(row.id)
       ElMessage.success('已删除记录')
+      loadBorrowRecords()
+    } catch (error) {
+      console.error('删除记录失败:', error)
+      ElMessage.error('删除记录失败')
     }
-    // 这里后期对接API
   }).catch(() => {})
 }
 
 const getStatusType = (status) => {
   const typeMap = {
-    borrowed: 'warning',
-    returning: 'info',
-    returned: 'success',
-    overdue: 'danger'
+    pending: 'info',
+    approved: 'success',
+    rejected: 'danger',
+    returning: 'warning',
+    returned: 'success'
   }
   return typeMap[status] || 'info'
+}
+
+const getStatusText = (status) => {
+  const textMap = {
+    pending: '待审批',
+    approved: '已通过',
+    rejected: '已拒绝',
+    returning: '归还审核中',
+    returned: '已归还'
+  }
+  return textMap[status] || status
 }
 </script>
 

@@ -424,10 +424,19 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Search } from '@element-plus/icons-vue'
-import { equipments } from '@/mock/equipments'
+import {
+  getEquipmentPage,
+  createEquipment,
+  updateEquipment,
+  deleteEquipment,
+  addBrand,
+  updateBrand,
+  deleteBrand,
+  scrapBrand
+} from '@/api/equipment'
 
 const searchKeyword = ref('')
 const filterCategory = ref('')
@@ -437,6 +446,7 @@ const dialogTitle = ref('添加器材')
 const formRef = ref(null)
 const editingId = ref(null)
 const currentEquipment = ref(null)
+const loading = ref(false)
 
 // 分页相关
 const currentPage = ref(1)
@@ -513,15 +523,39 @@ const restockRules = {
   reason: [{ required: true, message: '请输入申请理由', trigger: 'blur' }]
 }
 
-const equipmentsList = ref([...equipments])
+const equipmentsList = ref([])
+
+// 加载器材列表
+const loadEquipments = async () => {
+  loading.value = true
+  try {
+    const params = {
+      pageNum: 1,
+      pageSize: 1000,
+      keyword: searchKeyword.value,
+      category: filterCategory.value
+    }
+    const res = await getEquipmentPage(params)
+    equipmentsList.value = res.data.records || []
+  } catch (error) {
+    console.error('加载器材列表失败:', error)
+    ElMessage.error('加载器材列表失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+// 监听搜索条件变化
+watch([searchKeyword, filterCategory], () => {
+  loadEquipments()
+})
+
+onMounted(() => {
+  loadEquipments()
+})
 
 const filteredEquipments = computed(() => {
-  return equipmentsList.value.filter(equipment => {
-    const matchKeyword = !searchKeyword.value || equipment.name.includes(searchKeyword.value)
-    const matchCategory = !filterCategory.value || equipment.category === filterCategory.value
-    
-    return matchKeyword && matchCategory
-  })
+  return equipmentsList.value
 })
 
 // 分页后的数据
@@ -591,37 +625,27 @@ const calculateEquipmentScrapped = (equipment) => {
 const handleSubmit = async () => {
   if (!formRef.value) return
   
-  await formRef.value.validate((valid) => {
+  await formRef.value.validate(async (valid) => {
     if (valid) {
-      if (editingId.value) {
-        // 编辑
-        const index = equipmentsList.value.findIndex(v => v.id === editingId.value)
-        if (index !== -1) {
-          const existingBrands = equipmentsList.value[index].brands || []
-          equipmentsList.value[index] = { 
-            ...formData.value, 
-            id: editingId.value,
-            brands: existingBrands
-          }
-          // 重新计算库存和报废数
-          equipmentsList.value[index].stock = calculateEquipmentStock(equipmentsList.value[index])
-          equipmentsList.value[index].scrapped = calculateEquipmentScrapped(equipmentsList.value[index])
+      try {
+        loading.value = true
+        if (editingId.value) {
+          // 编辑器材
+          await updateEquipment(editingId.value, formData.value)
+          ElMessage.success('器材信息更新成功')
+        } else {
+          // 添加器材
+          await createEquipment(formData.value)
+          ElMessage.success('器材添加成功')
         }
-        ElMessage.success('器材信息更新成功')
-      } else {
-        // 添加
-        const newEquipment = {
-          ...formData.value,
-          id: Date.now(),
-          stock: 0,
-          scrapped: 0,
-          createdAt: new Date().toISOString().split('T')[0],
-          brands: []
-        }
-        equipmentsList.value.push(newEquipment)
-        ElMessage.success('器材添加成功')
+        dialogVisible.value = false
+        await loadEquipments()
+      } catch (error) {
+        console.error('保存器材失败:', error)
+        ElMessage.error(error.message || '保存器材失败')
+      } finally {
+        loading.value = false
       }
-      dialogVisible.value = false
     }
   })
 }
@@ -649,11 +673,17 @@ const handleDelete = (row) => {
       cancelButtonText: '取消',
       type: 'warning'
     }
-  ).then(() => {
-    const index = equipmentsList.value.findIndex(v => v.id === row.id)
-    if (index !== -1) {
-      equipmentsList.value.splice(index, 1)
+  ).then(async () => {
+    try {
+      loading.value = true
+      await deleteEquipment(row.id)
       ElMessage.success('器材删除成功')
+      await loadEquipments()
+    } catch (error) {
+      console.error('删除器材失败:', error)
+      ElMessage.error(error.message || '删除器材失败')
+    } finally {
+      loading.value = false
     }
   }).catch(() => {})
 }
@@ -712,37 +742,37 @@ const handleEditBrand = (row, index) => {
 const handleSubmitBrand = async () => {
   if (!brandFormRef.value) return
   
-  await brandFormRef.value.validate((valid) => {
+  await brandFormRef.value.validate(async (valid) => {
     if (valid) {
-      if (!currentEquipment.value.brands) {
-        currentEquipment.value.brands = []
-      }
-      
-      if (editingBrandIndex.value !== null) {
-        // 编辑品牌规格
-        const existingScrapped = currentEquipment.value.brands[editingBrandIndex.value].scrapped || 0
-        currentEquipment.value.brands[editingBrandIndex.value] = {
-          ...brandFormData.value,
-          scrapped: existingScrapped,
-          id: currentEquipment.value.brands[editingBrandIndex.value].id
+      try {
+        loading.value = true
+        const equipmentId = currentEquipment.value.id
+        
+        if (editingBrandIndex.value !== null) {
+          // 编辑品牌规格
+          const brandId = currentEquipment.value.brands[editingBrandIndex.value].id
+          await updateBrand(equipmentId, brandId, brandFormData.value)
+          ElMessage.success('品牌规格更新成功')
+        } else {
+          // 添加品牌规格
+          await addBrand(equipmentId, brandFormData.value)
+          ElMessage.success('品牌规格添加成功')
         }
-        ElMessage.success('品牌规格更新成功')
-      } else {
-        // 添加品牌规格
-        const newBrand = {
-          ...brandFormData.value,
-          scrapped: 0,
-          id: Date.now()
+        
+        brandFormVisible.value = false
+        // 重新加载器材列表以获取最新数据
+        await loadEquipments()
+        // 更新当前器材数据
+        const updatedEquipment = equipmentsList.value.find(e => e.id === equipmentId)
+        if (updatedEquipment) {
+          currentEquipment.value = updatedEquipment
         }
-        currentEquipment.value.brands.push(newBrand)
-        ElMessage.success('品牌规格添加成功')
+      } catch (error) {
+        console.error('保存品牌规格失败:', error)
+        ElMessage.error(error.message || '保存品牌规格失败')
+      } finally {
+        loading.value = false
       }
-      
-      // 自动更新器材总库存和报废数
-      currentEquipment.value.stock = calculateEquipmentStock(currentEquipment.value)
-      currentEquipment.value.scrapped = calculateEquipmentScrapped(currentEquipment.value)
-      
-      brandFormVisible.value = false
     }
   })
 }
@@ -763,20 +793,36 @@ const handleScrapBrand = (row, index) => {
 const handleSubmitScrap = async () => {
   if (!scrapFormRef.value) return
   
-  await scrapFormRef.value.validate((valid) => {
+  await scrapFormRef.value.validate(async (valid) => {
     if (valid) {
-      const brand = currentEquipment.value.brands[scrapBrandIndex.value]
-      
-      // 减少正常数量，增加报废数量
-      brand.stock -= scrapFormData.value.scrapCount
-      brand.scrapped = (brand.scrapped || 0) + scrapFormData.value.scrapCount
-      
-      // 自动更新器材总库存和报废数
-      currentEquipment.value.stock = calculateEquipmentStock(currentEquipment.value)
-      currentEquipment.value.scrapped = calculateEquipmentScrapped(currentEquipment.value)
-      
-      ElMessage.success(`已报废${scrapFormData.value.scrapCount}件器材`)
-      scrapDialogVisible.value = false
+      try {
+        loading.value = true
+        const equipmentId = currentEquipment.value.id
+        const brand = currentEquipment.value.brands[scrapBrandIndex.value]
+        const brandId = brand.id
+        
+        const scrapData = {
+          count: scrapFormData.value.scrapCount,
+          reason: scrapFormData.value.reason
+        }
+        
+        await scrapBrand(equipmentId, brandId, scrapData)
+        ElMessage.success(`已报废${scrapFormData.value.scrapCount}件器材`)
+        scrapDialogVisible.value = false
+        
+        // 重新加载器材列表以获取最新数据
+        await loadEquipments()
+        // 更新当前器材数据
+        const updatedEquipment = equipmentsList.value.find(e => e.id === equipmentId)
+        if (updatedEquipment) {
+          currentEquipment.value = updatedEquipment
+        }
+      } catch (error) {
+        console.error('报废器材失败:', error)
+        ElMessage.error(error.message || '报废器材失败')
+      } finally {
+        loading.value = false
+      }
     }
   })
 }
@@ -797,18 +843,38 @@ const handleRestockBrand = (row, index) => {
 const handleSubmitRestock = async () => {
   if (!restockFormRef.value) return
   
-  await restockFormRef.value.validate((valid) => {
+  await restockFormRef.value.validate(async (valid) => {
     if (valid) {
-      // 这里实际应该提交到后台，等待审批
-      // 暂时直接增加库存模拟审批通过
-      const brand = currentEquipment.value.brands[restockBrandIndex.value]
-      brand.stock += restockFormData.value.restockCount
-      
-      // 自动更新器材总库存
-      currentEquipment.value.stock = calculateEquipmentStock(currentEquipment.value)
-      
-      ElMessage.success(`进货申请已提交，申请数量：${restockFormData.value.restockCount}件`)
-      restockDialogVisible.value = false
+      try {
+        loading.value = true
+        // 进货功能：直接更新品牌规格库存
+        const equipmentId = currentEquipment.value.id
+        const brand = currentEquipment.value.brands[restockBrandIndex.value]
+        const brandId = brand.id
+        
+        const updatedBrandData = {
+          name: brand.name,
+          model: brand.model,
+          stock: brand.stock + restockFormData.value.restockCount
+        }
+        
+        await updateBrand(equipmentId, brandId, updatedBrandData)
+        ElMessage.success(`进货成功，已增加${restockFormData.value.restockCount}件库存`)
+        restockDialogVisible.value = false
+        
+        // 重新加载器材列表以获取最新数据
+        await loadEquipments()
+        // 更新当前器材数据
+        const updatedEquipment = equipmentsList.value.find(e => e.id === equipmentId)
+        if (updatedEquipment) {
+          currentEquipment.value = updatedEquipment
+        }
+      } catch (error) {
+        console.error('进货失败:', error)
+        ElMessage.error(error.message || '进货失败')
+      } finally {
+        loading.value = false
+      }
     }
   })
 }
@@ -822,12 +888,28 @@ const handleDeleteBrand = (index) => {
       cancelButtonText: '取消',
       type: 'warning'
     }
-  ).then(() => {
-    currentEquipment.value.brands.splice(index, 1)
-    // 自动更新器材总库存和报废数
-    currentEquipment.value.stock = calculateEquipmentStock(currentEquipment.value)
-    currentEquipment.value.scrapped = calculateEquipmentScrapped(currentEquipment.value)
-    ElMessage.success('品牌规格删除成功')
+  ).then(async () => {
+    try {
+      loading.value = true
+      const equipmentId = currentEquipment.value.id
+      const brandId = currentEquipment.value.brands[index].id
+      
+      await deleteBrand(equipmentId, brandId)
+      ElMessage.success('品牌规格删除成功')
+      
+      // 重新加载器材列表以获取最新数据
+      await loadEquipments()
+      // 更新当前器材数据
+      const updatedEquipment = equipmentsList.value.find(e => e.id === equipmentId)
+      if (updatedEquipment) {
+        currentEquipment.value = updatedEquipment
+      }
+    } catch (error) {
+      console.error('删除品牌规格失败:', error)
+      ElMessage.error(error.message || '删除品牌规格失败')
+    } finally {
+      loading.value = false
+    }
   }).catch(() => {})
 }
 
