@@ -1,5 +1,13 @@
 import request from '@/utils/request'
 
+// 获取器材分类列表
+export function getEquipmentCategories() {
+    return request({
+        url: '/equipment/categories',
+        method: 'get'
+    })
+}
+
 // 分页查询器材列表
 export function getEquipmentPage(params) {
     return request({
