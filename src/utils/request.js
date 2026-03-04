@@ -1,6 +1,7 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
+import router from '@/router'
 
 const request = axios.create({
   baseURL: '/api',
@@ -30,7 +31,34 @@ request.interceptors.response.use(
     return res
   },
   error => {
-    ElMessage.error(error.message || '网络错误')
+    // 处理HTTP状态码错误
+    if (error.response) {
+      const status = error.response.status
+      const message = error.response.data?.message || error.message
+
+      switch (status) {
+        case 401:
+          // Token过期或未授权
+          ElMessage.error('登录已过期，请重新登录')
+          const userStore = useUserStore()
+          userStore.logout()
+          router.push('/login')
+          break
+        case 403:
+          ElMessage.error('没有权限访问')
+          break
+        case 404:
+          ElMessage.error('请求的资源不存在')
+          break
+        case 500:
+          ElMessage.error('服务器错误')
+          break
+        default:
+          ElMessage.error(message || '网络错误')
+      }
+    } else {
+      ElMessage.error(error.message || '网络错误')
+    }
     return Promise.reject(error)
   }
 )
