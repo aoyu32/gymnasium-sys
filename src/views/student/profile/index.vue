@@ -26,43 +26,43 @@
             <div class="user-info-list">
               <div class="info-item">
                 <span class="label">性别：</span>
-                <span class="value">{{ userInfo.gender }}</span>
+                <span class="value">{{ userInfo.gender || '未设置' }}</span>
               </div>
               <div class="info-item">
                 <span class="label">生日：</span>
-                <span class="value">{{ userInfo.birthday }}</span>
+                <span class="value">{{ userInfo.birthday || '未设置' }}</span>
               </div>
               <div class="info-item">
                 <span class="label">学院：</span>
-                <span class="value">{{ userInfo.college }}</span>
+                <span class="value">{{ userInfo.college || '未设置' }}</span>
               </div>
               <div class="info-item">
                 <span class="label">专业：</span>
-                <span class="value">{{ userInfo.major }}</span>
+                <span class="value">{{ userInfo.major || '未设置' }}</span>
               </div>
               <div class="info-item">
                 <span class="label">年级：</span>
-                <span class="value">{{ userInfo.grade }}</span>
+                <span class="value">{{ userInfo.grade || '未设置' }}</span>
               </div>
               <div class="info-item">
                 <span class="label">班级：</span>
-                <span class="value">{{ userInfo.class }}</span>
+                <span class="value">{{ userInfo.classInfo || '未设置' }}</span>
               </div>
               <div class="info-item">
                 <span class="label">手机：</span>
-                <span class="value">{{ userInfo.phone }}</span>
+                <span class="value">{{ userInfo.phone || '未设置' }}</span>
               </div>
               <div class="info-item">
                 <span class="label">邮箱：</span>
-                <span class="value">{{ userInfo.email }}</span>
+                <span class="value">{{ userInfo.email || '未设置' }}</span>
               </div>
               <div class="info-item">
                 <span class="label">QQ：</span>
-                <span class="value">{{ userInfo.qq }}</span>
+                <span class="value">{{ userInfo.qq || '未设置' }}</span>
               </div>
               <div class="info-item">
                 <span class="label">籍贯：</span>
-                <span class="value">{{ userInfo.hometown }}</span>
+                <span class="value">{{ userInfo.address || '未设置' }}</span>
               </div>
             </div>
             
@@ -339,7 +339,7 @@
           </el-select>
         </el-form-item>
         <el-form-item label="班级">
-          <el-input v-model="editForm.class" placeholder="例如：软件2101班" />
+          <el-input v-model="editForm.classInfo" placeholder="例如：软件2101班" />
         </el-form-item>
         <el-form-item label="手机号">
           <el-input v-model="editForm.phone" />
@@ -351,7 +351,7 @@
           <el-input v-model="editForm.qq" />
         </el-form-item>
         <el-form-item label="籍贯">
-          <el-input v-model="editForm.hometown" placeholder="例如：江苏省南京市" />
+          <el-input v-model="editForm.address" placeholder="例如：江苏省南京市" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -536,6 +536,8 @@ import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { User, Camera, Plus } from '@element-plus/icons-vue'
 import { getMyBorrowRecords, deleteBorrowApplication, createReturnApplication } from '@/api/equipment'
+import { getCurrentStudentInfo, updateStudentInfo, changePassword, updateAvatar } from '@/api/student'
+import { uploadImage } from '@/api/file'
 
 const activeTab = ref('privateActivities')
 const showEditDialog = ref(false)
@@ -603,18 +605,18 @@ const returnRules = {
 }
 
 const userInfo = ref({
-  name: '张三',
-  studentId: '2021001',
-  gender: '男',
-  grade: '2021级',
-  college: '计算机学院',
-  major: '软件工程',
-  class: '软件2101班',
-  phone: '138****8888',
-  email: 'zhangsan@example.com',
-  qq: '123456789',
-  birthday: '2003-05-15',
-  hometown: '江苏省南京市',
+  name: '',
+  studentId: '',
+  gender: '',
+  grade: '',
+  college: '',
+  major: '',
+  classInfo: '',
+  phone: '',
+  email: '',
+  qq: '',
+  birthday: '',
+  address: '',
   avatar: ''
 })
 
@@ -718,6 +720,34 @@ const venueBookings = ref([
 
 const equipmentRecords = ref([])
 
+// 加载学生信息
+const loadStudentInfo = async () => {
+  try {
+    const res = await getCurrentStudentInfo()
+    if (res.data) {
+      userInfo.value = {
+        name: res.data.name || '',
+        studentId: res.data.studentId || '',
+        gender: res.data.gender || '',
+        grade: res.data.grade || '',
+        college: res.data.college || '',
+        major: res.data.major || '',
+        classInfo: res.data.classInfo || '',
+        phone: res.data.phone || '',
+        email: res.data.email || '',
+        qq: res.data.qq || '',
+        birthday: res.data.birthday || '',
+        address: res.data.address || '',
+        avatar: res.data.avatar || ''
+      }
+      editForm.value = { ...userInfo.value }
+    }
+  } catch (error) {
+    console.error('加载学生信息失败:', error)
+    ElMessage.error('加载学生信息失败')
+  }
+}
+
 // 加载器材借还记录
 const loadEquipmentRecords = async () => {
   try {
@@ -746,13 +776,33 @@ const getEquipmentStatusText = (status) => {
 }
 
 onMounted(() => {
+  loadStudentInfo()
   loadEquipmentRecords()
 })
 
-const handleSave = () => {
-  Object.assign(userInfo.value, editForm.value)
-  showEditDialog.value = false
-  ElMessage.success('保存成功')
+const handleSave = async () => {
+  try {
+    await updateStudentInfo({
+      name: editForm.value.name,
+      gender: editForm.value.gender,
+      birthday: editForm.value.birthday,
+      college: editForm.value.college,
+      major: editForm.value.major,
+      grade: editForm.value.grade,
+      classInfo: editForm.value.classInfo,
+      phone: editForm.value.phone,
+      email: editForm.value.email,
+      qq: editForm.value.qq,
+      address: editForm.value.address
+    })
+    
+    Object.assign(userInfo.value, editForm.value)
+    showEditDialog.value = false
+    ElMessage.success('保存成功')
+  } catch (error) {
+    console.error('保存失败:', error)
+    ElMessage.error(error.message || '保存失败')
+  }
 }
 
 const getStatusType = (status) => {
@@ -970,11 +1020,18 @@ const handleChangePassword = async () => {
   
   try {
     await passwordFormRef.value.validate()
-    // TODO: 调用修改密码API
+    
+    await changePassword({
+      oldPassword: passwordForm.value.oldPassword,
+      newPassword: passwordForm.value.newPassword,
+      confirmPassword: passwordForm.value.confirmPassword
+    })
+    
     ElMessage.success('密码修改成功')
     handleResetPasswordForm()
   } catch (error) {
-    console.error('表单验证失败:', error)
+    console.error('修改密码失败:', error)
+    ElMessage.error(error.message || '修改密码失败')
   }
 }
 
@@ -992,7 +1049,7 @@ const triggerAvatarUpload = () => {
   avatarInput.value.click()
 }
 
-const handleAvatarChange = (event) => {
+const handleAvatarChange = async (event) => {
   const file = event.target.files[0]
   if (!file) return
 
@@ -1002,19 +1059,27 @@ const handleAvatarChange = (event) => {
     return
   }
 
-  // 验证文件大小（限制为2MB）
-  if (file.size > 2 * 1024 * 1024) {
-    ElMessage.error('图片大小不能超过2MB')
+  // 验证文件大小（限制为5MB）
+  if (file.size > 5 * 1024 * 1024) {
+    ElMessage.error('图片大小不能超过5MB')
     return
   }
 
-  // 读取文件并预览
-  const reader = new FileReader()
-  reader.onload = (e) => {
-    userInfo.value.avatar = e.target.result
+  try {
+    // 上传图片到OSS
+    const res = await uploadImage(file, 'avatar')
+    const avatarUrl = res.data
+    
+    // 更新头像
+    await updateAvatar(avatarUrl)
+    
+    // 更新本地显示
+    userInfo.value.avatar = avatarUrl
     ElMessage.success('头像上传成功')
+  } catch (error) {
+    console.error('头像上传失败:', error)
+    ElMessage.error(error.message || '头像上传失败')
   }
-  reader.readAsDataURL(file)
 
   // 清空input，允许重复选择同一文件
   event.target.value = ''
