@@ -191,18 +191,65 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Box, Goods } from '@element-plus/icons-vue'
-import { equipments } from '@/mock/equipments'
+import { getEquipmentById, createBorrowApplication } from '@/api/equipment'
+import { getCurrentStudentInfo } from '@/api/student'
+import { useUserStore } from '@/stores/user'
 
 const route = useRoute()
 const router = useRouter()
+const userStore = useUserStore()
 const formRef = ref(null)
+
+// 获取当前登录用户信息
+const userInfo = computed(() => userStore.userInfo)
 
 // 获取器材详情
 const equipment = ref(null)
+const loading = ref(false)
+
+const loadEquipmentDetail = async () => {
+  loading.value = true
+  try {
+    const id = parseInt(route.params.id)
+    const res = await getEquipmentById(id)
+    equipment.value = res.data
+    
+    // 加载完器材信息后，自动填充学生信息
+    await fillStudentInfo()
+  } catch (error) {
+    console.error('加载器材详情失败:', error)
+    ElMessage.error('加载器材详情失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+// 自动填充学生信息
+const fillStudentInfo = async () => {
+  try {
+    // 先尝试从store获取基本信息
+    if (userInfo.value) {
+      borrowForm.value.name = userInfo.value.name || ''
+    }
+    
+    // 调用API获取完整的学生信息
+    const res = await getCurrentStudentInfo()
+    if (res.data) {
+      borrowForm.value.name = res.data.name || borrowForm.value.name
+      borrowForm.value.phone = res.data.phone || ''
+      borrowForm.value.studentId = res.data.studentId || ''
+    }
+  } catch (error) {
+    console.error('获取学生信息失败:', error)
+    // 如果获取失败，使用store中的基本信息
+    if (userInfo.value) {
+      borrowForm.value.name = userInfo.value.name || ''
+    }
+  }
+}
 
 onMounted(() => {
-  const id = parseInt(route.params.id)
-  equipment.value = equipments.find(item => item.id === id)
+  loadEquipmentDetail()
 })
 
 // 分类标签映射
@@ -266,13 +313,28 @@ const handleBrandChange = () => {
 const handleSubmit = async () => {
   if (!formRef.value) return
   
-  await formRef.value.validate((valid) => {
+  await formRef.value.validate(async (valid) => {
     if (valid) {
-      ElMessage.success('借用申请提交成功，请等待审核')
-      // 这里后期对接API
-      setTimeout(() => {
-        router.push('/student/equipment')
-      }, 1500)
+      try {
+        const data = {
+          equipmentId: equipment.value.id,
+          brandId: borrowForm.value.brandId || null,
+          quantity: borrowForm.value.quantity,
+          days: borrowForm.value.days,
+          name: borrowForm.value.name,
+          phone: borrowForm.value.phone,
+          studentId: borrowForm.value.studentId,
+          reason: borrowForm.value.reason
+        }
+        await createBorrowApplication(data)
+        ElMessage.success('借用申请提交成功，请等待审核')
+        setTimeout(() => {
+          router.push('/student/equipment')
+        }, 1500)
+      } catch (error) {
+        console.error('提交借用申请失败:', error)
+        ElMessage.error(error.message || '提交借用申请失败')
+      }
     }
   })
 }
