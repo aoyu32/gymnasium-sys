@@ -16,10 +16,12 @@
         style="width: 150px"
         @change="handleFilterChange"
       >
-        <el-option label="球类" value="ball" />
-        <el-option label="球拍" value="racket" />
-        <el-option label="护具" value="protection" />
-        <el-option label="其他" value="other" />
+        <el-option
+          v-for="category in categories"
+          :key="category.id"
+          :label="category.name"
+          :value="category.name"
+        />
       </el-select>
       <el-select
         v-model="localFilters.status"
@@ -39,8 +41,9 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import { Search } from '@element-plus/icons-vue'
+import { getEquipmentCategories } from '@/api/equipment'
 
 const props = defineProps({
   filters: {
@@ -52,6 +55,21 @@ const props = defineProps({
 const emit = defineEmits(['update:filters', 'reset'])
 
 const localFilters = ref({ ...props.filters })
+const categories = ref([])
+
+// 加载器材分类
+const loadCategories = async () => {
+  try {
+    const res = await getEquipmentCategories()
+    categories.value = res.data || []
+  } catch (error) {
+    console.error('加载器材分类失败:', error)
+  }
+}
+
+onMounted(() => {
+  loadCategories()
+})
 
 watch(() => props.filters, (newVal) => {
   localFilters.value = { ...newVal }
