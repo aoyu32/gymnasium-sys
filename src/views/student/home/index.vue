@@ -70,11 +70,29 @@ const loadHotActivities = async () => {
       pageSize: 9
       // 不限制状态，查询所有活动
     })
-    hotActivities.value = res.data.records || []
+    // 转换数据格式
+    hotActivities.value = (res.data.records || []).map(item => ({
+      ...item,
+      time: formatDateTime(item.activityTime),
+      venue: item.venueName || item.areaName || '待定',
+      participants: item.currentParticipants
+    }))
   } catch (error) {
     console.error('加载热门活动失败:', error)
     ElMessage.error('加载热门活动失败')
   }
+}
+
+// 格式化日期时间
+const formatDateTime = (dateTime) => {
+  if (!dateTime) return ''
+  const date = new Date(dateTime)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  return `${year}-${month}-${day} ${hours}:${minutes}`
 }
 
 // 加载可预约场地
