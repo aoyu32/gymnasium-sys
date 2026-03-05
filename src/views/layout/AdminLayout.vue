@@ -65,7 +65,7 @@
           <div class="header-right">
             <el-dropdown @command="handleCommand">
               <div class="user-info" :class="{ 'system-user': isSystemAdmin }">
-                <el-avatar :size="36">
+                <el-avatar :size="36" :src="userInfo?.avatar">
                   <el-icon><User /></el-icon>
                 </el-avatar>
                 <span class="username">{{ userInfo?.name || userName }}</span>
@@ -173,10 +173,12 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useUserStore } from '@/stores/user'
+import { getCurrentManager, updateManager, changePassword as changeManagerPassword, updateAvatar } from '@/api/manager'
+import { uploadImage } from '@/api/file'
 import {
   Basketball,
   HomeFilled,
@@ -324,10 +326,10 @@ const passwordFormRef = ref(null)
 // 个人信息表单
 const profileForm = ref({
   avatar: '',
-  name: '刘老师',
-  employeeId: 'EMP001',
-  phone: '13800138000',
-  email: 'liu@example.com'
+  name: '',
+  employeeId: '',
+  phone: '',
+  email: ''
 })
 
 // 密码表单
@@ -336,6 +338,34 @@ const passwordForm = ref({
   newPassword: '',
   confirmPassword: ''
 })
+
+// 加载场地负责人信息
+const loadManagerInfo = async () => {
+  if (userRole.value !== 'manager') return
+  
+  try {
+    const res = await getCurrentManager()
+    if (res.code === 200) {
+      profileForm.value = {
+        avatar: res.data.avatar || '',
+        name: res.data.name || '',
+        employeeId: res.data.employeeId || '',
+        phone: res.data.phone || '',
+        email: res.data.email || ''
+      }
+      
+      // 同步更新userStore中的用户信息
+      const updatedUserInfo = {
+        ...userStore.userInfo,
+        name: res.data.name || '',
+        avatar: res.data.avatar || ''
+      }
+      userStore.setUserInfo(updatedUserInfo)
+    }
+  } catch (error) {
+    console.error('加载场地负责人信息失败:', error)
+  }
+}
 
 // 表单验证规则
 const profileRules = {
@@ -374,6 +404,7 @@ const passwordRules = {
 const handleCommand = (command) => {
   switch (command) {
     case 'profile':
+      loadManagerInfo()
       profileDialogVisible.value = true
       break
     case 'security':
@@ -402,11 +433,30 @@ const handleCommand = (command) => {
 const handleSaveProfile = async () => {
   if (!profileFormRef.value) return
   
-  await profileFormRef.value.validate((valid) => {
+  await profileFormRef.value.validate(async (valid) => {
     if (valid) {
-      // 这里后期对接API保存个人信息
-      ElMessage.success('个人信息保存成功')
-      profileDialogVisible.value = false
+      try {
+        const data = {
+          name: profileForm.value.name,
+          phone: profileForm.value.phone,
+          email: profileForm.value.email
+        }
+        
+        const res = await updateManager(data)
+        if (res.code === 200) {
+          ElMessage.success('个人信息保存成功')
+          profileDialogVisible.value = false
+          // 更新userStore中的用户信息
+          const updatedUserInfo = {
+            ...userStore.userInfo,
+            name: profileForm.value.name
+          }
+          userStore.setUserInfo(updatedUserInfo)
+          loadManagerInfo()
+        }
+      } catch (error) {
+        console.error('保存个人信息失败:', error)
+      }
     }
   })
 }
@@ -415,17 +465,28 @@ const handleSaveProfile = async () => {
 const handleChangePassword = async () => {
   if (!passwordFormRef.value) return
   
-  await passwordFormRef.value.validate((valid) => {
+  await passwordFormRef.value.validate(async (valid) => {
     if (valid) {
-      // 这里后期对接API修改密码
-      ElMessage.success('密码修改成功，请重新登录')
-      securityDialogVisible.value = false
-      
-      // 修改密码后自动退出登录
-      setTimeout(() => {
-        userStore.logout()
-        router.push('/auth/login')
-      }, 1500)
+      try {
+        const data = {
+          oldPassword: passwordForm.value.oldPassword,
+          newPassword: passwordForm.value.newPassword
+        }
+        
+        const res = await changeManagerPassword(data)
+        if (res.code === 200) {
+          ElMessage.success('密码修改成功，请重新登录')
+          securityDialogVisible.value = false
+          
+          // 修改密码后自动退出登录
+          setTimeout(() => {
+            userStore.logout()
+            router.push('/auth/login')
+          }, 1500)
+        }
+      } catch (error) {
+        console.error('修改密码失败:', error)
+      }
     }
   })
 }
@@ -447,15 +508,39 @@ const beforeAvatarUpload = (file) => {
 }
 
 // 自定义头像上传
-const handleAvatarUpload = (options) => {
+const handleAvatarUpload = async (options) => {
   const { file } = options
-  const reader = new FileReader()
-  reader.onload = (e) => {
-    profileForm.value.avatar = e.target.result
-    ElMessage.success('头像上传成功')
+  
+  try {
+    // 直接传递file对象，uploadImage函数会创建FormData
+    const res = await uploadImage(file, 'avatars')
+    if (res.code === 200) {
+      const avatarUrl = res.data
+      
+      // 调用更新头像接口
+      const updateRes = await updateAvatar(avatarUrl)
+      if (updateRes.code === 200) {
+        profileForm.value.avatar = avatarUrl
+        // 更新userStore中的头像
+        const updatedUserInfo = {
+          ...userStore.userInfo,
+          avatar: avatarUrl
+        }
+        userStore.setUserInfo(updatedUserInfo)
+        ElMessage.success('头像上传成功')
+      }
+    }
+  } catch (error) {
+    console.error('上传头像失败:', error)
+    ElMessage.error('上传头像失败')
   }
-  reader.readAsDataURL(file)
 }
+
+onMounted(() => {
+  if (userRole.value === 'manager') {
+    loadManagerInfo()
+  }
+})
 </script>
 
 <style lang="scss" scoped>
