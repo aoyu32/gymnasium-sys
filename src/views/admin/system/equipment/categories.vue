@@ -18,15 +18,18 @@
           placeholder="搜索分类名称"
           style="width: 300px"
           clearable
+          @clear="handleSearch"
+          @keyup.enter="handleSearch"
         >
           <template #prefix>
             <el-icon><Search /></el-icon>
           </template>
         </el-input>
+        <el-button type="primary" @click="handleSearch">搜索</el-button>
       </div>
 
       <!-- 分类列表 -->
-      <el-table :data="paginatedCategories" stripe style="margin-top: 20px">
+      <el-table :data="paginatedCategories" stripe style="margin-top: 20px" v-loading="loading">
         <el-table-column prop="name" label="分类名称" min-width="200" />
         <el-table-column prop="count" label="器材数量" min-width="120" align="center">
           <template #default="{ row }">
@@ -83,9 +86,15 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Search } from '@element-plus/icons-vue'
+import { 
+  getCategoryList, 
+  addCategory, 
+  updateCategory, 
+  deleteCategory 
+} from '@/api/admin/equipment-category'
 
 const searchKeyword = ref('')
 const currentPage = ref(1)
@@ -93,44 +102,9 @@ const pageSize = ref(10)
 const dialogVisible = ref(false)
 const isEdit = ref(false)
 const categoryFormRef = ref(null)
+const loading = ref(false)
 
-const categories = ref([
-  { 
-    id: 1, 
-    name: '球类', 
-    count: 150, 
-    description: '各类球类器材，包括篮球、足球、排球、羽毛球等',
-    createTime: '2020-09-01 10:00'
-  },
-  { 
-    id: 2, 
-    name: '球拍', 
-    count: 80, 
-    description: '各类球拍器材，包括羽毛球拍、网球拍、乒乓球拍等',
-    createTime: '2020-09-01 10:30'
-  },
-  { 
-    id: 3, 
-    name: '护具', 
-    count: 50, 
-    description: '运动护具，包括护膝、护腕、头盔、护肘等',
-    createTime: '2020-09-01 11:00'
-  },
-  { 
-    id: 4, 
-    name: '健身器材', 
-    count: 30, 
-    description: '健身相关器材，包括哑铃、跳绳、瑜伽垫、拉力器等',
-    createTime: '2020-09-01 11:30'
-  },
-  { 
-    id: 5, 
-    name: '田径器材', 
-    count: 25, 
-    description: '田径运动器材，包括跑鞋、跨栏架、铅球、标枪等',
-    createTime: '2021-03-15 09:00'
-  }
-])
+const categories = ref([])
 
 const categoryForm = ref({
   name: '',
@@ -144,20 +118,37 @@ const categoryRules = {
 
 const dialogTitle = computed(() => isEdit.value ? '编辑分类' : '添加分类')
 
-const filteredCategories = computed(() => {
-  let result = [...categories.value]
-  
-  if (searchKeyword.value) {
-    result = result.filter(c => c.name.includes(searchKeyword.value))
-  }
-  
-  return result
-})
+const filteredCategories = computed(() => categories.value)
 
 const paginatedCategories = computed(() => {
   const start = (currentPage.value - 1) * pageSize.value
   return filteredCategories.value.slice(start, start + pageSize.value)
 })
+
+// 加载器材分类列表
+const loadCategories = async () => {
+  loading.value = true
+  try {
+    const params = {
+      keyword: searchKeyword.value
+    }
+    
+    const res = await getCategoryList(params)
+    if (res.code === 200) {
+      categories.value = res.data
+    }
+  } catch (error) {
+    console.error('加载器材分类列表失败:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+// 搜索
+const handleSearch = () => {
+  currentPage.value = 1
+  loadCategories()
+}
 
 const handleAddCategory = () => {
   isEdit.value = false
@@ -170,52 +161,73 @@ const handleAddCategory = () => {
 
 const handleEdit = (row) => {
   isEdit.value = true
-  categoryForm.value = { ...row }
+  categoryForm.value = {
+    id: row.id,
+    name: row.name,
+    description: row.description
+  }
   dialogVisible.value = true
 }
 
 const handleSave = async () => {
   if (!categoryFormRef.value) return
   
-  await categoryFormRef.value.validate((valid) => {
+  await categoryFormRef.value.validate(async (valid) => {
     if (valid) {
-      if (isEdit.value) {
-        const index = categories.value.findIndex(c => c.id === categoryForm.value.id)
-        if (index !== -1) {
-          categories.value[index] = { ...categoryForm.value }
+      try {
+        const data = {
+          name: categoryForm.value.name,
+          description: categoryForm.value.description
         }
-        ElMessage.success('分类更新成功')
-      } else {
-        const newCategory = {
-          ...categoryForm.value,
-          id: Date.now(),
-          count: 0,
-          createTime: new Date().toLocaleString('zh-CN', { hour12: false }).replace(/\//g, '-')
+        
+        if (isEdit.value) {
+          const res = await updateCategory(categoryForm.value.id, data)
+          if (res.code === 200) {
+            ElMessage.success('分类更新成功')
+            dialogVisible.value = false
+            loadCategories()
+          }
+        } else {
+          const res = await addCategory(data)
+          if (res.code === 200) {
+            ElMessage.success('分类添加成功')
+            dialogVisible.value = false
+            loadCategories()
+          }
         }
-        categories.value.unshift(newCategory)
-        ElMessage.success('分类添加成功')
+      } catch (error) {
+        console.error('保存器材分类失败:', error)
       }
-      dialogVisible.value = false
     }
   })
 }
 
-const handleDelete = (row) => {
+const handleDelete = async (row) => {
   if (row.count > 0) {
     ElMessage.warning('该分类下还有器材，无法删除')
     return
   }
   
-  ElMessageBox.confirm('确定删除该分类吗？删除后将无法恢复。', '提示', {
-    type: 'warning'
-  }).then(() => {
-    const index = categories.value.findIndex(c => c.id === row.id)
-    if (index !== -1) {
-      categories.value.splice(index, 1)
+  try {
+    await ElMessageBox.confirm('确定删除该分类吗？删除后将无法恢复。', '提示', {
+      type: 'warning'
+    })
+    
+    const res = await deleteCategory(row.id)
+    if (res.code === 200) {
+      ElMessage.success('删除成功')
+      loadCategories()
     }
-    ElMessage.success('删除成功')
-  }).catch(() => {})
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('删除器材分类失败:', error)
+    }
+  }
 }
+
+onMounted(() => {
+  loadCategories()
+})
 </script>
 
 <style lang="scss" scoped>
