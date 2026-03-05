@@ -38,6 +38,27 @@
 
     .content-row {
         margin-bottom: 16px;
+
+        .el-card {
+            height: 400px;
+            display: flex;
+            flex-direction: column;
+
+            :deep(.el-card__header) {
+                flex-shrink: 0;
+            }
+
+            :deep(.el-card__body) {
+                flex: 1;
+                overflow: hidden;
+                display: flex;
+                flex-direction: column;
+
+                .el-table {
+                    flex: 1;
+                }
+            }
+        }
     }
 
     .card-header {
