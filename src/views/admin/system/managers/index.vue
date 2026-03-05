@@ -18,20 +18,23 @@
           placeholder="搜索负责人姓名或工号"
           style="width: 300px"
           clearable
+          @clear="handleSearch"
+          @keyup.enter="handleSearch"
         >
           <template #prefix>
             <el-icon><Search /></el-icon>
           </template>
         </el-input>
-        <el-select v-model="filterStatus" placeholder="状态" clearable style="width: 120px">
+        <el-select v-model="filterStatus" placeholder="状态" clearable style="width: 120px" @change="handleSearch">
           <el-option label="全部" value="" />
           <el-option label="正常" value="active" />
           <el-option label="已禁用" value="disabled" />
         </el-select>
+        <el-button type="primary" @click="handleSearch">搜索</el-button>
       </div>
 
       <!-- 负责人列表 -->
-      <el-table :data="paginatedManagers" stripe style="margin-top: 20px">
+      <el-table :data="paginatedManagers" stripe style="margin-top: 20px" v-loading="loading">
         <el-table-column prop="name" label="姓名" min-width="100" />
         <el-table-column prop="managerId" label="工号" min-width="120" />
         <el-table-column prop="gender" label="性别" min-width="80" />
@@ -62,8 +65,10 @@
           v-model:current-page="currentPage"
           v-model:page-size="pageSize"
           :page-sizes="[10, 20, 50, 100]"
-          :total="filteredManagers.length"
+          :total="total"
           layout="total, sizes, prev, pager, next, jumper"
+          @size-change="loadManagers"
+          @current-change="loadManagers"
         />
       </div>
     </el-card>
@@ -106,64 +111,28 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Search } from '@element-plus/icons-vue'
+import { 
+  getManagerList, 
+  addManager, 
+  updateManager, 
+  deleteManager, 
+  toggleManagerStatus 
+} from '@/api/admin/manager'
 
 const searchKeyword = ref('')
 const filterStatus = ref('')
 const currentPage = ref(1)
 const pageSize = ref(10)
+const total = ref(0)
 const dialogVisible = ref(false)
 const isEdit = ref(false)
 const managerFormRef = ref(null)
+const loading = ref(false)
 
-const managers = ref([
-  {
-    id: 1,
-    name: '刘老师',
-    managerId: 'M001',
-    gender: '男',
-    phone: '13900139001',
-    email: 'liu@example.com',
-    createTime: '2020-09-01 10:00',
-    status: 'active',
-    statusText: '正常'
-  },
-  {
-    id: 2,
-    name: '陈老师',
-    managerId: 'M002',
-    gender: '女',
-    phone: '13900139002',
-    email: 'chen@example.com',
-    createTime: '2020-09-01 11:00',
-    status: 'active',
-    statusText: '正常'
-  },
-  {
-    id: 3,
-    name: '王老师',
-    managerId: 'M003',
-    gender: '男',
-    phone: '13900139003',
-    email: 'wang@example.com',
-    createTime: '2021-03-15 09:00',
-    status: 'disabled',
-    statusText: '已禁用'
-  },
-  {
-    id: 4,
-    name: '李老师',
-    managerId: 'M004',
-    gender: '女',
-    phone: '13900139004',
-    email: 'li@example.com',
-    createTime: '2021-09-01 14:00',
-    status: 'active',
-    statusText: '正常'
-  }
-])
+const managers = ref([])
 
 const managerForm = ref({
   name: '',
@@ -194,27 +163,36 @@ const managerRules = {
 
 const dialogTitle = computed(() => isEdit.value ? '编辑负责人' : '添加负责人')
 
-const filteredManagers = computed(() => {
-  let result = [...managers.value]
-  
-  if (searchKeyword.value) {
-    result = result.filter(m => 
-      m.name.includes(searchKeyword.value) || 
-      m.managerId.includes(searchKeyword.value)
-    )
-  }
+const paginatedManagers = computed(() => managers.value)
 
-  if (filterStatus.value) {
-    result = result.filter(m => m.status === filterStatus.value)
+// 加载场地负责人列表
+const loadManagers = async () => {
+  loading.value = true
+  try {
+    const params = {
+      keyword: searchKeyword.value,
+      status: filterStatus.value,
+      pageNum: currentPage.value,
+      pageSize: pageSize.value
+    }
+    
+    const res = await getManagerList(params)
+    if (res.code === 200) {
+      managers.value = res.data.records
+      total.value = res.data.total
+    }
+  } catch (error) {
+    console.error('加载场地负责人列表失败:', error)
+  } finally {
+    loading.value = false
   }
-  
-  return result
-})
+}
 
-const paginatedManagers = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value
-  return filteredManagers.value.slice(start, start + pageSize.value)
-})
+// 搜索和筛选变化时重新加载
+const handleSearch = () => {
+  currentPage.value = 1
+  loadManagers()
+}
 
 const handleAdd = () => {
   isEdit.value = false
@@ -231,64 +209,97 @@ const handleAdd = () => {
 
 const handleEdit = (row) => {
   isEdit.value = true
-  managerForm.value = { ...row }
+  managerForm.value = {
+    id: row.id,
+    name: row.name,
+    managerId: row.managerId,
+    gender: row.gender,
+    phone: row.phone,
+    email: row.email
+  }
   dialogVisible.value = true
 }
 
 const handleSave = async () => {
   if (!managerFormRef.value) return
   
-  await managerFormRef.value.validate((valid) => {
+  await managerFormRef.value.validate(async (valid) => {
     if (valid) {
-      if (isEdit.value) {
-        const index = managers.value.findIndex(m => m.id === managerForm.value.id)
-        if (index !== -1) {
-          managers.value[index] = { ...managerForm.value }
+      try {
+        const data = {
+          managerId: managerForm.value.managerId,
+          name: managerForm.value.name,
+          gender: managerForm.value.gender,
+          phone: managerForm.value.phone,
+          email: managerForm.value.email,
+          password: managerForm.value.password
         }
-        ElMessage.success('负责人信息更新成功')
-      } else {
-        const newManager = {
-          ...managerForm.value,
-          id: Date.now(),
-          createTime: new Date().toLocaleString('zh-CN', { hour12: false }).replace(/\//g, '-'),
-          status: 'active',
-          statusText: '正常'
+        
+        if (isEdit.value) {
+          const res = await updateManager(managerForm.value.id, data)
+          if (res.code === 200) {
+            ElMessage.success('负责人信息更新成功')
+            dialogVisible.value = false
+            loadManagers()
+          }
+        } else {
+          const res = await addManager(data)
+          if (res.code === 200) {
+            ElMessage.success('负责人添加成功，默认密码为123456')
+            dialogVisible.value = false
+            loadManagers()
+          }
         }
-        delete newManager.password
-        managers.value.unshift(newManager)
-        ElMessage.success('负责人添加成功')
+      } catch (error) {
+        console.error('保存负责人信息失败:', error)
       }
-      dialogVisible.value = false
     }
   })
 }
 
-const handleToggleStatus = (row) => {
-  const newStatus = row.status === 'active' ? 'disabled' : 'active'
-  const newStatusText = newStatus === 'active' ? '正常' : '已禁用'
+const handleToggleStatus = async (row) => {
+  const newStatusText = row.status === 'active' ? '禁用' : '启用'
   
-  ElMessageBox.confirm(
-    `确定${newStatus === 'active' ? '启用' : '禁用'}该负责人吗？`,
-    '提示',
-    { type: 'warning' }
-  ).then(() => {
-    row.status = newStatus
-    row.statusText = newStatusText
-    ElMessage.success(newStatus === 'active' ? '已启用' : '已禁用')
-  }).catch(() => {})
+  try {
+    await ElMessageBox.confirm(
+      `确定${newStatusText}该负责人吗？`,
+      '提示',
+      { type: 'warning' }
+    )
+    
+    const res = await toggleManagerStatus(row.id)
+    if (res.code === 200) {
+      ElMessage.success(`已${newStatusText}`)
+      loadManagers()
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('切换状态失败:', error)
+    }
+  }
 }
 
-const handleDelete = (row) => {
-  ElMessageBox.confirm('确定删除该负责人吗？删除后将无法恢复。', '提示', {
-    type: 'warning'
-  }).then(() => {
-    const index = managers.value.findIndex(m => m.id === row.id)
-    if (index !== -1) {
-      managers.value.splice(index, 1)
+const handleDelete = async (row) => {
+  try {
+    await ElMessageBox.confirm('确定删除该负责人吗？删除后将无法恢复。', '提示', {
+      type: 'warning'
+    })
+    
+    const res = await deleteManager(row.id)
+    if (res.code === 200) {
+      ElMessage.success('删除成功')
+      loadManagers()
     }
-    ElMessage.success('删除成功')
-  }).catch(() => {})
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('删除负责人失败:', error)
+    }
+  }
 }
+
+onMounted(() => {
+  loadManagers()
+})
 </script>
 
 <style lang="scss" scoped>
