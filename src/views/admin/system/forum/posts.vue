@@ -19,15 +19,12 @@
         </el-input>
         <el-select v-model="filterCategory" placeholder="分类" clearable style="width: 150px">
           <el-option label="全部" value="" />
-          <el-option label="篮球" value="篮球" />
-          <el-option label="足球" value="足球" />
-          <el-option label="羽毛球" value="羽毛球" />
-          <el-option label="乒乓球" value="乒乓球" />
-          <el-option label="网球" value="网球" />
-          <el-option label="游泳" value="游泳" />
-          <el-option label="健身" value="健身" />
-          <el-option label="跑步" value="跑步" />
-          <el-option label="其他" value="其他" />
+          <el-option
+            v-for="category in categories"
+            :key="category.id"
+            :label="category.name"
+            :value="category.name"
+          />
         </el-select>
         <el-select v-model="filterStatus" placeholder="状态" clearable style="width: 120px">
           <el-option label="全部" value="" />
@@ -144,9 +141,10 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
+import { getAllPosts, getPostById, toggleHot, toggleStatus, deletePost, getAllCategories } from '@/api/admin/forum'
 
 const searchKeyword = ref('')
 const filterCategory = ref('')
@@ -156,121 +154,57 @@ const currentPage = ref(1)
 const pageSize = ref(10)
 const detailDialogVisible = ref(false)
 const currentPost = ref(null)
+const allPosts = ref([])
+const loading = ref(false)
+const categories = ref([])
 
-const allPosts = ref([
-  {
-    id: 1,
-    title: '分享一下我的篮球训练心得',
-    author: '张三',
-    category: '篮球',
-    summary: '最近坚持每天练习投篮，终于有了明显进步。分享几个小技巧给大家。',
-    content: '最近坚持每天练习投篮，终于有了明显进步。分享几个小技巧给大家：\n\n1. 保持正确的投篮姿势 - 双脚与肩同宽，膝盖微曲\n2. 每天至少练习100次 - 坚持是关键\n3. 注意手腕的发力 - 手腕要有弹性\n4. 多看职业球员的投篮视频学习 - 模仿是最好的学习方式\n\n希望对大家有帮助！',
-    images: [
-      'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=400',
-      'https://images.unsplash.com/photo-1519861531473-9200262188bf?w=400'
-    ],
-    views: 328,
-    comments: 25,
-    likes: 68,
-    isHot: true,
-    status: 'normal',
-    createTime: '2026-02-24 12:30'
-  },
-  {
-    id: 2,
-    title: '羽毛球新手入门指南',
-    author: '李四',
-    category: '羽毛球',
-    summary: '作为一个羽毛球爱好者，整理了一些新手常见问题和解决方法。',
-    content: '作为一个羽毛球爱好者，整理了一些新手常见问题和解决方法。包括握拍方式、基本步法、发球技巧等内容。',
-    images: [],
-    views: 456,
-    comments: 38,
-    likes: 92,
-    isHot: true,
-    status: 'normal',
-    createTime: '2026-02-24 09:30'
-  },
-  {
-    id: 3,
-    title: '足球场上的团队配合技巧',
-    author: '王五',
-    category: '足球',
-    summary: '足球是一项团队运动，良好的配合至关重要。',
-    content: '足球是一项团队运动，良好的配合至关重要。今天和大家分享一些实用的配合技巧和战术理解。',
-    images: [
-      'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=400'
-    ],
-    views: 289,
-    comments: 19,
-    likes: 54,
-    isHot: true,
-    status: 'normal',
-    createTime: '2026-02-23 14:30'
-  },
-  {
-    id: 4,
-    title: '健身房新手避坑指南',
-    author: '赵六',
-    category: '健身',
-    summary: '刚开始健身的朋友们注意了！这些常见错误一定要避免。',
-    content: '刚开始健身的朋友们注意了！这些常见错误一定要避免，否则不仅效果不好，还可能受伤。',
-    images: [],
-    views: 512,
-    comments: 42,
-    likes: 108,
-    isHot: true,
-    status: 'normal',
-    createTime: '2026-02-23 10:15'
-  },
-  {
-    id: 5,
-    title: '晨跑的正确打开方式',
-    author: '孙七',
-    category: '跑步',
-    summary: '坚持晨跑一个月了，分享一些心得体会。',
-    content: '坚持晨跑一个月了，分享一些心得体会。包括跑前热身、跑步节奏、跑后拉伸等注意事项。',
-    images: [
-      'https://images.unsplash.com/photo-1552674605-db6ffd4facb5?w=400'
-    ],
-    views: 234,
-    comments: 16,
-    likes: 45,
-    isHot: false,
-    status: 'normal',
-    createTime: '2026-02-22 07:00'
-  },
-  {
-    id: 6,
-    title: '游泳初学者的安全注意事项',
-    author: '周八',
-    category: '游泳',
-    summary: '游泳是一项很好的运动，但安全第一。',
-    content: '游泳是一项很好的运动，但安全第一。分享一些初学者需要注意的安全事项。',
-    images: [],
-    views: 178,
-    comments: 12,
-    likes: 32,
-    isHot: false,
-    status: 'hidden',
-    createTime: '2026-02-21 15:20'
-  },
-  {
-    id: 7,
-    title: '乒乓球发球技巧详解',
-    author: '吴九',
-    category: '乒乓球',
-    summary: '发球是乒乓球比赛中的重要环节。',
-    content: '发球是乒乓球比赛中的重要环节，掌握好发球技巧可以占据主动。',
-    images: [],
-    views: 145,
-    comments: 8,
-    likes: 28,
-    isHot: false,
-    status: 'normal',
-    createTime: '2026-02-20 11:45'
+// 加载分类列表
+const loadCategories = async () => {
+  try {
+    const res = await getAllCategories()
+    categories.value = res.data || []
+  } catch (error) {
+    console.error('加载分类失败:', error)
   }
-])
+}
+
+// 加载帖子列表
+const loadPosts = async () => {
+  loading.value = true
+  try {
+    const res = await getAllPosts({
+      pageNum: 1,
+      pageSize: 1000, // 加载所有数据，前端分页
+      sortBy: 'created_at',
+      sortOrder: 'desc'
+    })
+    allPosts.value = (res.data.records || []).map(post => ({
+      id: post.id,
+      title: post.title,
+      author: post.authorName,
+      category: post.categoryName,
+      summary: post.summary,
+      content: post.content,
+      images: post.images || [],
+      views: post.views,
+      comments: post.commentsCount,
+      likes: post.likes,
+      isHot: post.isHot,
+      status: post.status,
+      createTime: post.createdAt
+    }))
+  } catch (error) {
+    console.error('加载帖子失败:', error)
+    ElMessage.error('加载帖子失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  loadCategories()
+  loadPosts()
+})
 
 const filteredPosts = computed(() => {
   let result = [...allPosts.value]
@@ -303,52 +237,105 @@ const paginatedPosts = computed(() => {
   return filteredPosts.value.slice(start, start + pageSize.value)
 })
 
-const handleViewDetail = (row) => {
-  currentPost.value = row
-  detailDialogVisible.value = true
-}
-
-const handleToggleHot = (row) => {
-  row.isHot = !row.isHot
-  ElMessage.success(row.isHot ? '已设为热门' : '已取消热门')
-}
-
-const handleToggleHotFromDetail = () => {
-  if (currentPost.value) {
-    handleToggleHot(currentPost.value)
+const handleViewDetail = async (row) => {
+  try {
+    const res = await getPostById(row.id)
+    currentPost.value = {
+      id: res.data.id,
+      title: res.data.title,
+      author: res.data.authorName,
+      category: res.data.categoryName,
+      summary: res.data.summary,
+      content: res.data.content,
+      images: res.data.images || [],
+      views: res.data.views,
+      comments: res.data.commentsCount,
+      likes: res.data.likes,
+      isHot: res.data.isHot,
+      status: res.data.status,
+      createTime: res.data.createdAt
+    }
+    detailDialogVisible.value = true
+  } catch (error) {
+    console.error('获取帖子详情失败:', error)
+    ElMessage.error('获取帖子详情失败')
   }
 }
 
-const handleToggleStatus = (row) => {
+const handleToggleHot = async (row) => {
+  const newIsHot = !row.isHot
+  try {
+    await toggleHot(row.id, newIsHot)
+    row.isHot = newIsHot
+    ElMessage.success(newIsHot ? '已设为热门' : '已取消热门')
+  } catch (error) {
+    console.error('操作失败:', error)
+    ElMessage.error('操作失败')
+  }
+}
+
+const handleToggleHotFromDetail = async () => {
+  if (currentPost.value) {
+    await handleToggleHot(currentPost.value)
+    // 更新列表中的数据
+    const post = allPosts.value.find(p => p.id === currentPost.value.id)
+    if (post) {
+      post.isHot = currentPost.value.isHot
+    }
+  }
+}
+
+const handleToggleStatus = async (row) => {
   const newStatus = row.status === 'normal' ? 'hidden' : 'normal'
   
-  ElMessageBox.confirm(
-    `确定${newStatus === 'normal' ? '上架' : '下架'}该帖子吗？${newStatus === 'hidden' ? '下架后学生将无法查看该帖子。' : ''}`,
-    '提示',
-    { type: 'warning' }
-  ).then(() => {
+  try {
+    await ElMessageBox.confirm(
+      `确定${newStatus === 'normal' ? '上架' : '下架'}该帖子吗？${newStatus === 'hidden' ? '下架后学生将无法查看该帖子。' : ''}`,
+      '提示',
+      { type: 'warning' }
+    )
+    
+    await toggleStatus(row.id, newStatus)
     row.status = newStatus
     ElMessage.success(newStatus === 'normal' ? '已上架' : '已下架')
-  }).catch(() => {})
-}
-
-const handleToggleStatusFromDetail = () => {
-  if (currentPost.value) {
-    detailDialogVisible.value = false
-    handleToggleStatus(currentPost.value)
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('操作失败:', error)
+      ElMessage.error('操作失败')
+    }
   }
 }
 
-const handleDelete = (row) => {
-  ElMessageBox.confirm('确定删除该帖子吗？删除后将无法恢复。', '提示', {
-    type: 'warning'
-  }).then(() => {
+const handleToggleStatusFromDetail = async () => {
+  if (currentPost.value) {
+    detailDialogVisible.value = false
+    await handleToggleStatus(currentPost.value)
+    // 更新列表中的数据
+    const post = allPosts.value.find(p => p.id === currentPost.value.id)
+    if (post) {
+      post.status = currentPost.value.status
+    }
+  }
+}
+
+const handleDelete = async (row) => {
+  try {
+    await ElMessageBox.confirm('确定删除该帖子吗？删除后将无法恢复。', '提示', {
+      type: 'warning'
+    })
+    
+    await deletePost(row.id)
     const index = allPosts.value.findIndex(p => p.id === row.id)
     if (index !== -1) {
       allPosts.value.splice(index, 1)
     }
     ElMessage.success('删除成功')
-  }).catch(() => {})
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('删除失败:', error)
+      ElMessage.error('删除失败')
+    }
+  }
 }
 </script>
 
