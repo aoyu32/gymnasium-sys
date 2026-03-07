@@ -108,14 +108,19 @@ import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { User, UserFilled, Box, ChatDotRound } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
 import {
-  stats,
-  venueUsageData,
-  equipmentLossData,
-  generateUsageTrendData,
-  activityTypeData
-} from '@/mock/dashboard'
+  getStats,
+  getVenueUsage,
+  getEquipmentLoss,
+  getUsageTrend,
+  getActivityTypeDistribution
+} from '@/api/admin/dashboard'
 
-const statsData = ref(stats)
+const statsData = ref({
+  totalStudents: 0,
+  totalManagers: 0,
+  totalEquipment: 0,
+  totalPosts: 0
+})
 
 // 图表实例
 const venueUsageChart = ref(null)
@@ -128,212 +133,258 @@ let equipmentChart = null
 let trendChart = null
 let activityChart = null
 
+// 加载统计数据
+const loadStats = async () => {
+  try {
+    const res = await getStats()
+    if (res.code === 200) {
+      statsData.value = res.data
+    }
+  } catch (error) {
+    console.error('加载统计数据失败:', error)
+  }
+}
+
 // 初始化全馆使用率图表
-const initVenueUsageChart = () => {
-  venueChart = echarts.init(venueUsageChart.value)
-  
-  const option = {
-    tooltip: {
-      trigger: 'axis',
-      axisPointer: {
-        type: 'shadow'
-      },
-      formatter: '{b}: {c}%'
-    },
-    grid: {
-      left: '3%',
-      right: '4%',
-      bottom: '3%',
-      top: '10%',
-      containLabel: true
-    },
-    xAxis: {
-      type: 'category',
-      data: venueUsageData.map(item => item.name),
-      axisLabel: {
-        interval: 0,
-        rotate: 30,
-        fontSize: 12
-      }
-    },
-    yAxis: {
-      type: 'value',
-      name: '使用率(%)',
-      max: 100,
-      axisLabel: {
-        formatter: '{value}%'
-      }
-    },
-    series: [
-      {
-        name: '使用率',
-        type: 'bar',
-        data: venueUsageData.map(item => ({
-          value: item.value,
-          itemStyle: {
-            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-              { offset: 0, color: '#1890ff' },
-              { offset: 1, color: '#40a9ff' }
-            ])
-          }
-        })),
-        barWidth: '60%',
-        label: {
-          show: true,
-          position: 'top',
-          formatter: '{c}%',
-          fontSize: 12
+const initVenueUsageChart = async () => {
+  try {
+    const res = await getVenueUsage()
+    if (res.code !== 200) return
+    
+    const venueUsageData = res.data
+    
+    venueChart = echarts.init(venueUsageChart.value)
+    
+    const option = {
+      tooltip: {
+        trigger: 'axis',
+        axisPointer: {
+          type: 'shadow'
         },
-        emphasis: {
-          itemStyle: {
-            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-              { offset: 0, color: '#096dd9' },
-              { offset: 1, color: '#1890ff' }
-            ])
+        formatter: '{b}: {c}%'
+      },
+      grid: {
+        left: '3%',
+        right: '4%',
+        bottom: '3%',
+        top: '10%',
+        containLabel: true
+      },
+      xAxis: {
+        type: 'category',
+        data: venueUsageData.map(item => item.name),
+        axisLabel: {
+          interval: 0,
+          rotate: 30,
+          fontSize: 12
+        }
+      },
+      yAxis: {
+        type: 'value',
+        name: '使用率(%)',
+        max: 100,
+        axisLabel: {
+          formatter: '{value}%'
+        }
+      },
+      series: [
+        {
+          name: '使用率',
+          type: 'bar',
+          data: venueUsageData.map(item => ({
+            value: item.value,
+            itemStyle: {
+              color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                { offset: 0, color: '#1890ff' },
+                { offset: 1, color: '#40a9ff' }
+              ])
+            }
+          })),
+          barWidth: '60%',
+          label: {
+            show: true,
+            position: 'top',
+            formatter: '{c}%',
+            fontSize: 12
+          },
+          emphasis: {
+            itemStyle: {
+              color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                { offset: 0, color: '#096dd9' },
+                { offset: 1, color: '#1890ff' }
+              ])
+            }
           }
         }
-      }
-    ]
+      ]
+    }
+    
+    venueChart.setOption(option)
+  } catch (error) {
+    console.error('加载场馆使用率数据失败:', error)
   }
-  
-  venueChart.setOption(option)
 }
 
 // 初始化器材损耗分析图表
-const initEquipmentLossChart = () => {
-  equipmentChart = echarts.init(equipmentLossChart.value)
-  
-  const option = {
-    tooltip: {
-      trigger: 'axis',
-      axisPointer: {
-        type: 'shadow'
-      }
-    },
-    legend: {
-      data: equipmentLossData.series.map(s => s.name),
-      top: 0
-    },
-    grid: {
-      left: '3%',
-      right: '4%',
-      bottom: '3%',
-      top: '15%',
-      containLabel: true
-    },
-    xAxis: {
-      type: 'category',
-      data: equipmentLossData.categories,
-      axisLabel: {
-        interval: 0,
-        rotate: 30
-      }
-    },
-    yAxis: {
-      type: 'value'
-    },
-    color: ['#52c41a', '#faad14', '#fa8c16', '#f5222d'],
-    series: equipmentLossData.series.map(item => ({
-      name: item.name,
-      type: 'bar',
-      stack: 'total',
-      data: item.data,
-      emphasis: {
-        focus: 'series'
-      }
-    }))
+const initEquipmentLossChart = async () => {
+  try {
+    const res = await getEquipmentLoss()
+    if (res.code !== 200) return
+    
+    const equipmentLossData = res.data
+    
+    equipmentChart = echarts.init(equipmentLossChart.value)
+    
+    const option = {
+      tooltip: {
+        trigger: 'axis',
+        axisPointer: {
+          type: 'shadow'
+        }
+      },
+      legend: {
+        data: equipmentLossData.series.map(s => s.name),
+        top: 0
+      },
+      grid: {
+        left: '3%',
+        right: '4%',
+        bottom: '3%',
+        top: '15%',
+        containLabel: true
+      },
+      xAxis: {
+        type: 'category',
+        data: equipmentLossData.categories,
+        axisLabel: {
+          interval: 0,
+          rotate: 30
+        }
+      },
+      yAxis: {
+        type: 'value'
+      },
+      color: ['#52c41a', '#faad14', '#fa8c16', '#f5222d'],
+      series: equipmentLossData.series.map(item => ({
+        name: item.name,
+        type: 'bar',
+        stack: 'total',
+        data: item.data,
+        emphasis: {
+          focus: 'series'
+        }
+      }))
+    }
+    
+    equipmentChart.setOption(option)
+  } catch (error) {
+    console.error('加载器材损耗数据失败:', error)
   }
-  
-  equipmentChart.setOption(option)
 }
 
 // 初始化使用趋势图表
-const initUsageTrendChart = () => {
-  trendChart = echarts.init(usageTrendChart.value)
-  
-  const trendData = generateUsageTrendData()
-  
-  const option = {
-    tooltip: {
-      trigger: 'axis'
-    },
-    legend: {
-      data: trendData.series.map(s => s.name),
-      top: 0
-    },
-    grid: {
-      left: '3%',
-      right: '4%',
-      bottom: '3%',
-      top: '15%',
-      containLabel: true
-    },
-    xAxis: {
-      type: 'category',
-      boundaryGap: false,
-      data: trendData.dates,
-      axisLabel: {
-        interval: 4
-      }
-    },
-    yAxis: {
-      type: 'value'
-    },
-    color: ['#1890ff', '#52c41a', '#faad14'],
-    series: trendData.series.map(item => ({
-      name: item.name,
-      type: 'line',
-      smooth: true,
-      data: item.data,
-      emphasis: {
-        focus: 'series'
-      }
-    }))
+const initUsageTrendChart = async () => {
+  try {
+    const res = await getUsageTrend()
+    if (res.code !== 200) return
+    
+    const trendData = res.data
+    
+    trendChart = echarts.init(usageTrendChart.value)
+    
+    const option = {
+      tooltip: {
+        trigger: 'axis'
+      },
+      legend: {
+        data: trendData.series.map(s => s.name),
+        top: 0
+      },
+      grid: {
+        left: '3%',
+        right: '4%',
+        bottom: '3%',
+        top: '15%',
+        containLabel: true
+      },
+      xAxis: {
+        type: 'category',
+        boundaryGap: false,
+        data: trendData.dates,
+        axisLabel: {
+          interval: 4
+        }
+      },
+      yAxis: {
+        type: 'value'
+      },
+      color: ['#1890ff', '#52c41a', '#faad14'],
+      series: trendData.series.map(item => ({
+        name: item.name,
+        type: 'line',
+        smooth: true,
+        data: item.data,
+        emphasis: {
+          focus: 'series'
+        }
+      }))
+    }
+    
+    trendChart.setOption(option)
+  } catch (error) {
+    console.error('加载使用趋势数据失败:', error)
   }
-  
-  trendChart.setOption(option)
 }
 
 // 初始化活动类型分布图表
-const initActivityTypeChart = () => {
-  activityChart = echarts.init(activityTypeChart.value)
-  
-  const option = {
-    tooltip: {
-      trigger: 'item',
-      formatter: '{b}: {c}场 ({d}%)'
-    },
-    legend: {
-      orient: 'vertical',
-      right: 10,
-      top: 'center',
-      textStyle: {
-        fontSize: 12
-      }
-    },
-    color: ['#1890ff', '#52c41a', '#faad14', '#fa8c16', '#f5222d', '#722ed1', '#eb2f96', '#13c2c2', '#2f54eb', '#a0d911'],
-    series: [
-      {
-        name: '活动类型',
-        type: 'pie',
-        radius: '65%',
-        center: ['35%', '50%'],
-        data: activityTypeData,
-        emphasis: {
-          itemStyle: {
-            shadowBlur: 10,
-            shadowOffsetX: 0,
-            shadowColor: 'rgba(0, 0, 0, 0.5)'
-          }
-        },
-        label: {
+const initActivityTypeChart = async () => {
+  try {
+    const res = await getActivityTypeDistribution()
+    if (res.code !== 200) return
+    
+    const activityTypeData = res.data
+    
+    activityChart = echarts.init(activityTypeChart.value)
+    
+    const option = {
+      tooltip: {
+        trigger: 'item',
+        formatter: '{b}: {c}场 ({d}%)'
+      },
+      legend: {
+        orient: 'vertical',
+        right: 10,
+        top: 'center',
+        textStyle: {
           fontSize: 12
         }
-      }
-    ]
+      },
+      color: ['#1890ff', '#52c41a', '#faad14', '#fa8c16', '#f5222d', '#722ed1', '#eb2f96', '#13c2c2', '#2f54eb', '#a0d911'],
+      series: [
+        {
+          name: '活动类型',
+          type: 'pie',
+          radius: '65%',
+          center: ['35%', '50%'],
+          data: activityTypeData,
+          emphasis: {
+            itemStyle: {
+              shadowBlur: 10,
+              shadowOffsetX: 0,
+              shadowColor: 'rgba(0, 0, 0, 0.5)'
+            }
+          },
+          label: {
+            fontSize: 12
+          }
+        }
+      ]
+    }
+    
+    activityChart.setOption(option)
+  } catch (error) {
+    console.error('加载活动类型数据失败:', error)
   }
-  
-  activityChart.setOption(option)
 }
 
 // 窗口大小改变时重新调整图表
@@ -345,6 +396,9 @@ const handleResize = () => {
 }
 
 onMounted(() => {
+  // 加载统计数据
+  loadStats()
+  
   // 延迟初始化，确保DOM已渲染
   setTimeout(() => {
     initVenueUsageChart()

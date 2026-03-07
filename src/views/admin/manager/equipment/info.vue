@@ -438,6 +438,7 @@ import {
   scrapBrand
 } from '@/api/equipment'
 import { uploadImage } from '@/api/file'
+import { submitPurchase } from '@/api/equipment-purchase'
 
 const searchKeyword = ref('')
 const filterCategory = ref('')
@@ -851,31 +852,24 @@ const handleSubmitRestock = async () => {
     if (valid) {
       try {
         loading.value = true
-        // 进货功能：直接更新品牌规格库存
-        const equipmentId = currentEquipment.value.id
+        // 提交进货申请，等待系统管理员审批
         const brand = currentEquipment.value.brands[restockBrandIndex.value]
-        const brandId = brand.id
         
-        const updatedBrandData = {
-          name: brand.name,
+        const purchaseData = {
+          equipmentName: currentEquipment.value.name,
+          categoryId: currentEquipment.value.categoryId,
+          brandName: brand.name,
           model: brand.model,
-          stock: brand.stock + restockFormData.value.restockCount
+          quantity: restockFormData.value.restockCount,
+          reason: restockFormData.value.reason
         }
         
-        await updateBrand(equipmentId, brandId, updatedBrandData)
-        ElMessage.success(`进货成功，已增加${restockFormData.value.restockCount}件库存`)
+        await submitPurchase(purchaseData)
+        ElMessage.success('进货申请已提交，等待系统管理员审批')
         restockDialogVisible.value = false
-        
-        // 重新加载器材列表以获取最新数据
-        await loadEquipments()
-        // 更新当前器材数据
-        const updatedEquipment = equipmentsList.value.find(e => e.id === equipmentId)
-        if (updatedEquipment) {
-          currentEquipment.value = updatedEquipment
-        }
       } catch (error) {
-        console.error('进货失败:', error)
-        ElMessage.error(error.message || '进货失败')
+        console.error('提交进货申请失败:', error)
+        ElMessage.error(error.message || '提交进货申请失败')
       } finally {
         loading.value = false
       }
