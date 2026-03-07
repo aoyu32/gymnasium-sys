@@ -7,18 +7,19 @@
         <div class="category-tabs">
           <div
             v-for="item in categories"
-            :key="item.value"
+            :key="item.id"
             class="category-item"
-            :class="{ active: currentCategory === item.value }"
-            @click="handleCategoryChange(item.value)"
+            :class="{ active: currentCategory === item.id }"
+            @click="handleCategoryChange(item.id)"
           >
-            {{ item.label }}
+            {{ item.name }}
           </div>
         </div>
 
         <!-- 帖子列表 -->
         <PostList
-          :posts="filteredPosts"
+          v-loading="loading"
+          :posts="posts"
           @like="handleLike"
           @comment="handleComment"
           @view-post="handleViewPost"
@@ -43,58 +44,101 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Edit } from '@element-plus/icons-vue'
 import PostList from './components/PostList.vue'
 import HotPosts from './components/HotPosts.vue'
-import { posts } from '@/mock/posts'
+import { getPostPage, getAllCategories, likePost, unlikePost } from '@/api/forum'
 
 const router = useRouter()
-const currentCategory = ref('all')
+const currentCategory = ref(null)
+const categories = ref([])
+const posts = ref([])
+const loading = ref(false)
 
-const categories = [
-  { label: '全部', value: 'all' },
-  { label: '篮球', value: 'basketball' },
-  { label: '足球', value: 'football' },
-  { label: '羽毛球', value: 'badminton' },
-  { label: '乒乓球', value: 'tabletennis' },
-  { label: '网球', value: 'tennis' },
-  { label: '排球', value: 'volleyball' },
-  { label: '游泳', value: 'swimming' },
-  { label: '健身', value: 'fitness' },
-  { label: '跑步', value: 'running' },
-  { label: '其他', value: 'other' }
-]
-
-// 筛选后的帖子列表
-const filteredPosts = computed(() => {
-  if (currentCategory.value === 'all') {
-    return posts
+// 加载分类
+const loadCategories = async () => {
+  try {
+    const res = await getAllCategories()
+    categories.value = [
+      { id: null, name: '全部' },
+      ...(res.data || [])
+    ]
+  } catch (error) {
+    console.error('加载分类失败:', error)
+    ElMessage.error('加载分类失败')
   }
-  return posts.filter(post => post.category === currentCategory.value)
-})
+}
+
+// 加载帖子列表
+const loadPosts = async () => {
+  loading.value = true
+  try {
+    const params = {
+      pageNum: 1,
+      pageSize: 50,
+      sortBy: 'created_at',
+      sortOrder: 'desc'
+    }
+    
+    if (currentCategory.value) {
+      params.categoryId = currentCategory.value
+    }
+    
+    const res = await getPostPage(params)
+    posts.value = (res.data.records || []).map(post => ({
+      ...post,
+      category: post.categoryName,
+      author: post.authorName,
+      avatar: post.authorAvatar,
+      time: post.createdAt,
+      comments: post.commentsCount,
+      summary: post.summary || post.title
+    }))
+  } catch (error) {
+    console.error('加载帖子失败:', error)
+    ElMessage.error('加载帖子失败')
+  } finally {
+    loading.value = false
+  }
+}
 
 // 热门帖子（按点赞数排序，取前5个）
 const hotPosts = computed(() => {
-  return [...posts]
+  return [...posts.value]
     .filter(post => post.isHot)
     .sort((a, b) => b.likes - a.likes)
     .slice(0, 5)
 })
 
-const handleCategoryChange = (category) => {
-  currentCategory.value = category
+const handleCategoryChange = (categoryId) => {
+  currentCategory.value = categoryId
+  loadPosts()
 }
 
-const handleLike = (post) => {
-  post.likes++
-  ElMessage.success('点赞成功')
+const handleLike = async (post) => {
+  try {
+    if (post.isLiked) {
+      await unlikePost(post.id)
+      post.likes--
+      post.isLiked = false
+      ElMessage.success('已取消点赞')
+    } else {
+      await likePost(post.id)
+      post.likes++
+      post.isLiked = true
+      ElMessage.success('点赞成功')
+    }
+  } catch (error) {
+    console.error('点赞操作失败:', error)
+    ElMessage.error('操作失败')
+  }
 }
 
 const handleComment = (post) => {
-  ElMessage.info('评论功能开发中')
+  router.push(`/student/forum/${post.id}`)
 }
 
 const handleViewPost = (post) => {
@@ -102,9 +146,13 @@ const handleViewPost = (post) => {
 }
 
 const goToCreatePost = () => {
-  console.log('Navigating to create post page...')
   router.push('/student/forum/create')
 }
+
+onMounted(() => {
+  loadCategories()
+  loadPosts()
+})
 </script>
 
 <style lang="scss" scoped>

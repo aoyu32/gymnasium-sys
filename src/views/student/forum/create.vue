@@ -25,19 +25,14 @@
           />
         </el-form-item>
 
-        <el-form-item label="帖子分类" prop="category">
-          <el-select v-model="formData.category" placeholder="请选择分类" style="width: 100%">
-            <el-option label="全部" value="全部" />
-            <el-option label="篮球" value="篮球" />
-            <el-option label="足球" value="足球" />
-            <el-option label="羽毛球" value="羽毛球" />
-            <el-option label="乒乓球" value="乒乓球" />
-            <el-option label="网球" value="网球" />
-            <el-option label="游泳" value="游泳" />
-            <el-option label="健身" value="健身" />
-            <el-option label="跑步" value="跑步" />
-            <el-option label="瑜伽" value="瑜伽" />
-            <el-option label="其他" value="其他" />
+        <el-form-item label="帖子分类" prop="categoryId">
+          <el-select v-model="formData.categoryId" placeholder="请选择分类" style="width: 100%">
+            <el-option
+              v-for="cat in categories"
+              :key="cat.id"
+              :label="cat.name"
+              :value="cat.id"
+            />
           </el-select>
         </el-form-item>
 
@@ -94,23 +89,27 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { ArrowLeft, Plus } from '@element-plus/icons-vue'
 import { MdEditor } from 'md-editor-v3'
 import 'md-editor-v3/lib/style.css'
+import { createPost, getAllCategories } from '@/api/forum'
+import { uploadImage } from '@/api/file'
 
 const router = useRouter()
 const formRef = ref(null)
 const submitting = ref(false)
 const fileList = ref([])
+const categories = ref([])
 
 const formData = reactive({
   title: '',
-  category: '',
+  categoryId: null,
   summary: '',
-  content: ''
+  content: '',
+  images: []
 })
 
 const rules = {
@@ -118,7 +117,7 @@ const rules = {
     { required: true, message: '请输入帖子标题', trigger: 'blur' },
     { min: 5, max: 100, message: '标题长度在 5 到 100 个字符', trigger: 'blur' }
   ],
-  category: [
+  categoryId: [
     { required: true, message: '请选择帖子分类', trigger: 'change' }
   ],
   summary: [
@@ -160,6 +159,17 @@ const toolbars = [
   'htmlPreview'
 ]
 
+// 加载分类
+const loadCategories = async () => {
+  try {
+    const res = await getAllCategories()
+    categories.value = res.data || []
+  } catch (error) {
+    console.error('加载分类失败:', error)
+    ElMessage.error('加载分类失败')
+  }
+}
+
 const handleExceed = () => {
   ElMessage.warning('最多只能上传3张图片')
 }
@@ -171,20 +181,51 @@ const handleSubmit = async () => {
     await formRef.value.validate()
     submitting.value = true
 
-    // 模拟提交
-    setTimeout(() => {
-      ElMessage.success('帖子发布成功')
-      submitting.value = false
-      router.push('/student/forum')
-    }, 1000)
+    // 上传图片
+    const imageUrls = []
+    for (const file of fileList.value) {
+      if (file.raw) {
+        try {
+          const res = await uploadImage(file.raw)
+          imageUrls.push(res.data)
+        } catch (error) {
+          console.error('图片上传失败:', error)
+        }
+      }
+    }
+
+    // 提交帖子
+    await createPost({
+      title: formData.title,
+      categoryId: formData.categoryId,
+      summary: formData.summary,
+      content: formData.content,
+      images: imageUrls
+    })
+
+    ElMessage.success('帖子发布成功')
+    router.push('/student/forum')
   } catch (error) {
-    console.error('表单验证失败:', error)
+    console.error('发布失败:', error)
+    // 如果是表单验证错误
+    if (error && typeof error === 'object' && !error.response) {
+      ElMessage.error('请检查表单填写是否完整')
+      return
+    }
+    // 如果是后端返回的错误
+    ElMessage.error(error.response?.data?.message || '发布失败')
+  } finally {
+    submitting.value = false
   }
 }
 
 const goBack = () => {
   router.back()
 }
+
+onMounted(() => {
+  loadCategories()
+})
 </script>
 
 <style lang="scss" scoped>

@@ -7,22 +7,12 @@
         <div class="post-card">
           <div class="post-header">
             <div class="author-info">
-              <el-avatar :size="48" :src="post.avatar">
+              <el-avatar :size="48" :src="post.authorAvatar">
                 <el-icon><User /></el-icon>
               </el-avatar>
               <div class="author-meta">
-                <div class="author-name">{{ post.author }}</div>
-                <div class="post-time">2026-02-24 14:30</div>
-              </div>
-            </div>
-            <div class="author-stats">
-              <div class="stat-item">
-                <span class="stat-label">帖子</span>
-                <span class="stat-value">12</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-label">获赞</span>
-                <span class="stat-value">156</span>
+                <div class="author-name">{{ post.authorName }}</div>
+                <div class="post-time">{{ post.createdAt }}</div>
               </div>
             </div>
           </div>
@@ -47,12 +37,12 @@
           <div class="post-footer">
             <div class="post-stats">
               <span><el-icon><View /></el-icon> {{ post.views }}</span>
-              <span><el-icon><ChatDotRound /></el-icon> {{ comments.length }}</span>
+              <span><el-icon><ChatDotRound /></el-icon> {{ post.commentsCount }}</span>
             </div>
             <div class="post-actions">
-              <el-button @click="handleLike" :type="isLiked ? 'primary' : 'default'">
+              <el-button @click="handleLike" :type="post.isLiked ? 'primary' : 'default'">
                 <el-icon><Star /></el-icon>
-                {{ isLiked ? '已点赞' : '点赞' }} {{ post.likes }}
+                {{ post.isLiked ? '已点赞' : '点赞' }} {{ post.likes }}
               </el-button>
             </div>
           </div>
@@ -87,14 +77,14 @@
           <!-- 评论列表 -->
           <div class="comments-list">
             <div v-for="comment in comments" :key="comment.id" class="comment-item">
-              <el-avatar :size="40" :src="comment.avatar">
+              <el-avatar :size="40" :src="comment.userAvatar">
                 <el-icon><User /></el-icon>
               </el-avatar>
               <div class="comment-content">
                 <div class="comment-header">
                   <div class="comment-info">
-                    <span class="comment-author">{{ comment.author }}</span>
-                    <span class="comment-time">{{ comment.time }}</span>
+                    <span class="comment-author">{{ comment.userName }}</span>
+                    <span class="comment-time">{{ comment.createdAt }}</span>
                   </div>
                   <div class="comment-actions">
                     <el-button text size="small" @click="handleLikeComment(comment)">
@@ -115,7 +105,7 @@
                     v-model="replyContent"
                     type="textarea"
                     :rows="2"
-                    :placeholder="`回复 ${comment.author}...`"
+                    :placeholder="`回复 ${comment.userName}...`"
                     maxlength="200"
                     show-word-limit
                   />
@@ -130,13 +120,14 @@
                 <!-- 回复列表 -->
                 <div v-if="comment.replies?.length" class="replies-list">
                   <div v-for="reply in comment.replies" :key="reply.id" class="reply-item">
-                    <el-avatar :size="32" :src="reply.avatar">
+                    <el-avatar :size="32" :src="reply.userAvatar">
                       <el-icon><User /></el-icon>
                     </el-avatar>
                     <div class="reply-content">
                       <div class="reply-header">
-                        <span class="reply-author">{{ reply.author }}</span>
-                        <span class="reply-time">{{ reply.time }}</span>
+                        <span class="reply-author">{{ reply.userName }}</span>
+                        <span v-if="reply.parentUserName" class="reply-to">回复 {{ reply.parentUserName }}</span>
+                        <span class="reply-time">{{ reply.createdAt }}</span>
                       </div>
                       <div class="reply-text">{{ reply.content }}</div>
                     </div>
@@ -178,8 +169,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Edit, User, View, ChatDotRound, Star, ChatLineRound } from '@element-plus/icons-vue'
 import HotPosts from './components/HotPosts.vue'
-import { posts } from '@/mock/posts'
 import { marked } from 'marked'
+import { getPostById, likePost, unlikePost, getPostComments, createComment, likeComment, unlikeComment, getPostPage } from '@/api/forum'
 
 const route = useRoute()
 const router = useRouter()
@@ -188,45 +179,54 @@ const post = ref(null)
 const commentContent = ref('')
 const replyContent = ref('')
 const replyingTo = ref(null)
-const isLiked = ref(false)
+const comments = ref([])
+const hotPosts = ref([])
+const loading = ref(false)
 
-// 评论数据
-const comments = ref([
-  {
-    id: 1,
-    author: '李四',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=comment1',
-    time: '2026-02-24 13:30',
-    content: '写得很好，学到了很多！',
-    likes: 5,
-    replies: [
-      {
-        id: 11,
-        author: '张三',
-        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=1',
-        time: '2026-02-24 14:00',
-        content: '谢谢支持！'
-      }
-    ]
-  },
-  {
-    id: 2,
-    author: '王五',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=comment2',
-    time: '2026-02-24 12:30',
-    content: '请问有视频教程吗？',
-    likes: 3,
-    replies: []
-  }
-])
-
-onMounted(() => {
-  const id = parseInt(route.params.id)
-  post.value = posts.find(item => item.id === id)
-  if (post.value) {
-    post.value.views++
-  }
+onMounted(async () => {
+  await loadPost()
+  await loadComments()
+  await loadHotPosts()
 })
+
+// 加载帖子详情
+const loadPost = async () => {
+  try {
+    loading.value = true
+    const res = await getPostById(route.params.id)
+    post.value = res.data
+  } catch (error) {
+    console.error('加载帖子失败:', error)
+    ElMessage.error('加载帖子失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+// 加载评论列表
+const loadComments = async () => {
+  try {
+    const res = await getPostComments(route.params.id)
+    comments.value = res.data || []
+  } catch (error) {
+    console.error('加载评论失败:', error)
+  }
+}
+
+// 加载热门帖子
+const loadHotPosts = async () => {
+  try {
+    const res = await getPostPage({
+      pageNum: 1,
+      pageSize: 5,
+      sortBy: 'likes',
+      sortOrder: 'desc'
+    })
+    hotPosts.value = (res.data.records || []).slice(0, 5)
+  } catch (error) {
+    console.error('加载热门帖子失败:', error)
+  }
+}
 
 // 渲染Markdown内容
 const renderedContent = computed(() => {
@@ -234,43 +234,51 @@ const renderedContent = computed(() => {
   return marked(post.value.content)
 })
 
-// 热门帖子
-const hotPosts = computed(() => {
-  return [...posts]
-    .filter(p => p.isHot)
-    .sort((a, b) => b.likes - a.likes)
-    .slice(0, 5)
-})
-
-const handleLike = () => {
-  isLiked.value = !isLiked.value
-  if (isLiked.value) {
-    post.value.likes++
-    ElMessage.success('点赞成功')
-  } else {
-    post.value.likes--
+const handleLike = async () => {
+  if (!post.value) return
+  
+  try {
+    if (post.value.isLiked) {
+      await unlikePost(post.value.id)
+      post.value.likes--
+      post.value.isLiked = false
+      ElMessage.success('已取消点赞')
+    } else {
+      await likePost(post.value.id)
+      post.value.likes++
+      post.value.isLiked = true
+      ElMessage.success('点赞成功')
+    }
+  } catch (error) {
+    console.error('点赞操作失败:', error)
+    ElMessage.error('操作失败')
   }
 }
 
-const handleSubmitComment = () => {
+const handleSubmitComment = async () => {
   if (!commentContent.value.trim()) return
   
-  const now = new Date()
-  const timeStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
-  
-  const newComment = {
-    id: Date.now(),
-    author: '当前用户',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=current',
-    time: timeStr,
-    content: commentContent.value,
-    likes: 0,
-    replies: []
+  try {
+    await createComment({
+      postId: parseInt(route.params.id),
+      content: commentContent.value,
+      parentId: null
+    })
+    
+    commentContent.value = ''
+    ElMessage.success('评论发表成功')
+    
+    // 重新加载评论列表
+    await loadComments()
+    
+    // 更新帖子评论数
+    if (post.value) {
+      post.value.commentsCount++
+    }
+  } catch (error) {
+    console.error('发表评论失败:', error)
+    ElMessage.error(error.response?.data?.message || '发表评论失败')
   }
-  
-  comments.value.unshift(newComment)
-  commentContent.value = ''
-  ElMessage.success('评论发表成功')
 }
 
 const handleReply = (comment) => {
@@ -283,42 +291,54 @@ const cancelReply = () => {
   replyContent.value = ''
 }
 
-const submitReply = (comment) => {
+const submitReply = async (comment) => {
   if (!replyContent.value.trim()) return
   
-  const now = new Date()
-  const timeStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
-  
-  const newReply = {
-    id: Date.now(),
-    author: '当前用户',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=current',
-    time: timeStr,
-    content: replyContent.value
+  try {
+    await createComment({
+      postId: parseInt(route.params.id),
+      content: replyContent.value,
+      parentId: comment.id
+    })
+    
+    cancelReply()
+    ElMessage.success('回复成功')
+    
+    // 重新加载评论列表
+    await loadComments()
+    
+    // 更新帖子评论数
+    if (post.value) {
+      post.value.commentsCount++
+    }
+  } catch (error) {
+    console.error('回复失败:', error)
+    ElMessage.error(error.response?.data?.message || '回复失败')
   }
-  
-  if (!comment.replies) {
-    comment.replies = []
-  }
-  comment.replies.push(newReply)
-  
-  cancelReply()
-  ElMessage.success('回复成功')
 }
 
-const handleLikeComment = (comment) => {
-  comment.likes++
-  ElMessage.success('点赞成功')
+const handleLikeComment = async (comment) => {
+  try {
+    if (comment.isLiked) {
+      await unlikeComment(comment.id)
+      comment.likes--
+      comment.isLiked = false
+      ElMessage.success('已取消点赞')
+    } else {
+      await likeComment(comment.id)
+      comment.likes++
+      comment.isLiked = true
+      ElMessage.success('点赞成功')
+    }
+  } catch (error) {
+    console.error('点赞操作失败:', error)
+    ElMessage.error('操作失败')
+  }
 }
 
 const goToPost = (post) => {
   router.push(`/student/forum/${post.id}`)
-  // 重新加载帖子数据
-  const id = parseInt(post.id)
-  const newPost = posts.find(item => item.id === id)
-  if (newPost) {
-    window.location.reload()
-  }
+  window.location.reload()
 }
 
 const goToForum = () => {
