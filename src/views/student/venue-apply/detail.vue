@@ -124,7 +124,14 @@
             </el-form-item>
 
             <el-form-item label="关联活动" prop="activityId">
-              <el-select v-model="applyForm.activityId" placeholder="请选择关联活动" style="width: 100%" @change="handleActivityChange">
+              <el-select
+                v-model="applyForm.activityId"
+                :placeholder="hasUserActivities ? '请选择关联活动' : '暂无可关联活动'"
+                style="width: 100%"
+                :loading="activityLoading"
+                :disabled="activityLoading || !hasUserActivities"
+                @change="handleActivityChange"
+              >
                 <el-option
                   v-for="activity in userActivities"
                   :key="activity.id"
@@ -132,6 +139,10 @@
                   :value="activity.id"
                 />
               </el-select>
+              <div v-if="!activityLoading && !hasUserActivities" class="activity-empty-tip">
+                <span>请先创建活动后再申请场地</span>
+                <el-button link type="primary" @click="goToCreateActivity">去创建活动</el-button>
+              </div>
             </el-form-item>
 
             <el-form-item label="活动类型" prop="activityType">
@@ -187,6 +198,7 @@
                 style="width: 100%"
                 @click="handleSubmit"
                 :loading="loading"
+                :disabled="activityLoading || !hasUserActivities"
               >
                 提交申请
               </el-button>
@@ -227,6 +239,7 @@ import { ElMessage } from 'element-plus'
 import { Basketball, User } from '@element-plus/icons-vue'
 import { getVenueById } from '@/api/venue'
 import { submitApplication } from '@/api/application'
+import { getMyActivities } from '@/api/activity'
 import { getCurrentStudentInfo } from '@/api/student'
 import ImageCarousel from '@/components/image-carousel/index.vue'
 
@@ -234,14 +247,10 @@ const route = useRoute()
 const router = useRouter()
 const formRef = ref(null)
 const loading = ref(false)
+const activityLoading = ref(false)
 
-// 模拟用户创建的活动列表
-const userActivities = ref([
-  { id: 1, name: '篮球友谊赛', type: 'basketball' },
-  { id: 2, name: '羽毛球训练', type: 'badminton' },
-  { id: 3, name: '足球比赛', type: 'football' },
-  { id: 4, name: '网球练习', type: 'tennis' }
-])
+const userActivities = ref([])
+const hasUserActivities = computed(() => userActivities.value.length > 0)
 
 // 获取场地详情
 const venue = ref(null)
@@ -279,9 +288,39 @@ const loadStudentInfo = async () => {
   }
 }
 
+const loadUserActivities = async () => {
+  try {
+    activityLoading.value = true
+    const res = await getMyActivities({
+      pageNum: 1,
+      pageSize: 1000
+    })
+    const records = res.data?.records || []
+    userActivities.value = records
+      .filter(item => item?.id && item?.title && item.status !== 'cancelled')
+      .map(item => ({
+        id: item.id,
+        name: item.title,
+        type: item.category
+      }))
+
+    if (!userActivities.value.length) {
+      ElMessage.warning('请先创建活动后再申请场地')
+    }
+  } catch (error) {
+    console.error('加载关联活动失败:', error)
+    ElMessage.error('加载关联活动失败')
+  } finally {
+    activityLoading.value = false
+  }
+}
+
 onMounted(async () => {
-  await loadVenueDetail()
-  await loadStudentInfo()
+  await Promise.all([
+    loadVenueDetail(),
+    loadStudentInfo(),
+    loadUserActivities()
+  ])
 })
 
 // 分类标签映射
@@ -355,9 +394,7 @@ const rules = {
 const handleActivityChange = (value) => {
   // 选择活动时，自动填充活动类型
   const selectedActivity = userActivities.value.find(a => a.id === value)
-  if (selectedActivity) {
-    applyForm.value.activityType = selectedActivity.type
-  }
+  applyForm.value.activityType = selectedActivity ? selectedActivity.type : ''
 }
 
 // 禁用过去的日期
@@ -367,6 +404,10 @@ const disabledDate = (time) => {
 
 const handleSubmit = async () => {
   if (!formRef.value) return
+  if (!hasUserActivities.value) {
+    ElMessage.warning('请先创建活动后再申请场地')
+    return
+  }
   
   await formRef.value.validate(async (valid) => {
     if (valid) {
@@ -413,6 +454,10 @@ const goBack = () => {
   router.push('/student/venue-apply')
 }
 
+const goToCreateActivity = () => {
+  router.push('/student/activities')
+}
+
 // 获取区域状态类型（用于tag颜色）
 const getAreaStatusType = (area) => {
   if (area.maintenance) {
@@ -438,4 +483,14 @@ const getAreaStatusText = (area) => {
 
 <style lang="scss" scoped>
 @use './styles/detail.scss';
+
+.activity-empty-tip {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #909399;
+}
 </style>

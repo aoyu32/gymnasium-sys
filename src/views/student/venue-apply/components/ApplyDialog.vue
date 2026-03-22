@@ -35,7 +35,14 @@
         />
       </el-form-item>
       <el-form-item label="关联活动" prop="activityId">
-        <el-select v-model="form.activityId" placeholder="请选择关联活动" style="width: 100%" @change="handleActivityChange">
+        <el-select
+          v-model="form.activityId"
+          :placeholder="hasUserActivities ? '请选择关联活动' : '暂无可关联活动'"
+          style="width: 100%"
+          :loading="activityLoading"
+          :disabled="activityLoading || !hasUserActivities"
+          @change="handleActivityChange"
+        >
           <el-option
             v-for="activity in userActivities"
             :key="activity.id"
@@ -43,6 +50,10 @@
             :value="activity.id"
           />
         </el-select>
+        <div v-if="!activityLoading && !hasUserActivities" class="activity-empty-tip">
+          <span>请先创建活动后再申请场地</span>
+          <el-button link type="primary" @click="goToCreateActivity">去创建活动</el-button>
+        </div>
       </el-form-item>
       <el-form-item label="活动类型" prop="activityType">
         <el-select v-model="form.activityType" placeholder="请选择" style="width: 100%" disabled>
@@ -84,14 +95,16 @@
     </el-form>
     <template #footer>
       <el-button @click="$emit('update:visible', false)">取消</el-button>
-      <el-button type="primary" @click="handleSubmit">提交申请</el-button>
+      <el-button type="primary" :disabled="activityLoading || !hasUserActivities" @click="handleSubmit">提交申请</el-button>
     </template>
   </el-dialog>
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
+import { useRouter } from 'vue-router'
+import { getMyActivities } from '@/api/activity'
 
 const props = defineProps({
   visible: {
@@ -106,15 +119,12 @@ const props = defineProps({
 
 const emit = defineEmits(['update:visible', 'submit'])
 
+const router = useRouter()
 const formRef = ref(null)
+const activityLoading = ref(false)
 
-// 模拟用户创建的活动列表
-const userActivities = ref([
-  { id: 1, name: '篮球友谊赛', type: 'basketball' },
-  { id: 2, name: '羽毛球训练', type: 'badminton' },
-  { id: 3, name: '足球比赛', type: 'football' },
-  { id: 4, name: '网球练习', type: 'tennis' }
-])
+const userActivities = ref([])
+const hasUserActivities = computed(() => userActivities.value.length > 0)
 
 const form = ref({
   date: '',
@@ -136,16 +146,46 @@ const rules = {
   reason: [{ required: true, message: '请填写申请理由', trigger: 'blur' }]
 }
 
+const loadUserActivities = async () => {
+  try {
+    activityLoading.value = true
+    const res = await getMyActivities({
+      pageNum: 1,
+      pageSize: 1000
+    })
+    const records = res.data?.records || []
+    userActivities.value = records
+      .filter(item => item?.id && item?.title && item.status !== 'cancelled')
+      .map(item => ({
+        id: item.id,
+        name: item.title,
+        type: item.category
+      }))
+
+    if (!userActivities.value.length) {
+      ElMessage.warning('请先创建活动后再申请场地')
+    }
+  } catch (error) {
+    console.error('加载关联活动失败:', error)
+    ElMessage.error('加载关联活动失败')
+  } finally {
+    activityLoading.value = false
+  }
+}
+
 // 处理活动选择变化
 const handleActivityChange = (value) => {
   // 选择活动时，自动填充活动类型
   const selectedActivity = userActivities.value.find(a => a.id === value)
-  if (selectedActivity) {
-    form.value.activityType = selectedActivity.type
-  }
+  form.value.activityType = selectedActivity ? selectedActivity.type : ''
 }
 
 watch(() => props.visible, (newVal) => {
+  if (newVal) {
+    loadUserActivities()
+    return
+  }
+
   if (!newVal) {
     // 关闭时重置表单
     form.value = {
@@ -168,6 +208,10 @@ const disabledDate = (time) => {
 
 const handleSubmit = async () => {
   if (!formRef.value) return
+  if (!hasUserActivities.value) {
+    ElMessage.warning('请先创建活动后再申请场地')
+    return
+  }
   
   await formRef.value.validate((valid) => {
     if (valid) {
@@ -196,6 +240,11 @@ const handleSubmit = async () => {
   })
 }
 
+const goToCreateActivity = () => {
+  emit('update:visible', false)
+  router.push('/student/activities')
+}
+
 // 格式化日期为 YYYY-MM-DD
 const formatDate = (date) => {
   if (!date) return ''
@@ -215,3 +264,15 @@ const formatTime = (time) => {
   return `${hours}:${minutes}`
 }
 </script>
+
+<style scoped>
+.activity-empty-tip {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #909399;
+}
+</style>
