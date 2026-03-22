@@ -1,7 +1,6 @@
 <template>
   <header class="student-header">
     <div class="header-container">
-      <!-- Logo区域 -->
       <div class="header-logo" @click="goHome">
         <el-icon :size="32" color="#f5222d">
           <Basketball />
@@ -9,7 +8,6 @@
         <span class="logo-text">高校体育馆</span>
       </div>
 
-      <!-- 导航菜单 -->
       <nav class="header-nav">
         <div
           v-for="item in navItems"
@@ -25,20 +23,17 @@
         </div>
       </nav>
 
-      <!-- 搜索框 -->
       <div v-if="!isSearchPage" class="header-search">
         <el-input
           v-model="searchKeyword"
-          placeholder="搜索活动、场地..."
+          placeholder="搜索活动、场地、器材"
           :prefix-icon="Search"
           clearable
           @keyup.enter="handleSearch"
         />
       </div>
 
-      <!-- 用户操作区 -->
       <div class="header-actions">
-        <!-- 消息通知 -->
         <el-badge :value="unreadCount" :hidden="unreadCount === 0" class="action-item">
           <el-button circle @click="showNotifications">
             <el-icon :size="20">
@@ -47,7 +42,6 @@
           </el-button>
         </el-badge>
 
-        <!-- 用户信息 -->
         <el-dropdown trigger="click" @command="handleCommand">
           <div class="user-info">
             <el-avatar :size="36" :src="userInfo?.avatar">
@@ -72,39 +66,55 @@
       </div>
     </div>
 
-    <!-- 消息通知抽屉 -->
-    <el-drawer
-      v-model="notificationDrawer"
-      title="消息通知"
-      direction="rtl"
-      size="400px"
-    >
-      <div class="notification-list">
+    <el-drawer v-model="notificationDrawer" title="消息通知" direction="rtl" size="400px">
+      <div class="notification-toolbar">
+        <el-button link :loading="notificationLoading" @click="loadNotifications">刷新</el-button>
+        <el-button link :disabled="unreadCount === 0" @click="handleMarkAllRead">全部已读</el-button>
+      </div>
+
+      <div class="notification-list" v-loading="notificationLoading">
         <div
           v-for="item in notifications"
           :key="item.id"
           class="notification-item"
           :class="{ unread: !item.read }"
+          @click="handleNotificationClick(item)"
         >
           <div class="notification-icon">
-            <el-icon :size="24" :color="getNotificationColor(item.type)">
-              <component :is="getNotificationIcon(item.type)" />
+            <el-icon :size="24" :color="getNotificationColor(item.businessType)">
+              <component :is="getNotificationIcon(item.businessType)" />
             </el-icon>
           </div>
           <div class="notification-content">
-            <div class="notification-title">{{ item.title }}</div>
+            <div class="notification-title-row">
+              <div class="notification-title">{{ item.title }}</div>
+              <div class="notification-actions">
+                <span v-if="!item.read" class="unread-dot"></span>
+                <el-button
+                  class="delete-btn"
+                  link
+                  type="danger"
+                  @click.stop="handleDeleteNotification(item)"
+                >
+                  <el-icon><Delete /></el-icon>
+                </el-button>
+              </div>
+            </div>
             <div class="notification-desc">{{ item.content }}</div>
-            <div class="notification-time">{{ item.time }}</div>
+            <div class="notification-meta">
+              <span>{{ item.senderName || '系统' }}</span>
+              <span>{{ item.time }}</span>
+            </div>
           </div>
         </div>
-        <el-empty v-if="notifications.length === 0" description="暂无消息" />
+        <el-empty v-if="!notificationLoading && notifications.length === 0" description="暂无消息" />
       </div>
     </el-drawer>
   </header>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useUserStore } from '@/stores/user'
@@ -120,10 +130,16 @@ import {
   Bell,
   ArrowDown,
   SwitchButton,
-  SuccessFilled,
-  WarningFilled,
-  InfoFilled
+  InfoFilled,
+  Delete
 } from '@element-plus/icons-vue'
+import {
+  getNotificationPage,
+  getUnreadNotificationCount,
+  markNotificationRead,
+  deleteNotification,
+  markAllNotificationsRead
+} from '@/api/notification'
 
 const router = useRouter()
 const route = useRoute()
@@ -131,51 +147,22 @@ const userStore = useUserStore()
 
 const searchKeyword = ref('')
 const notificationDrawer = ref(false)
-const unreadCount = ref(3)
+const notificationLoading = ref(false)
+const unreadCount = ref(0)
+const notifications = ref([])
 
 const userInfo = computed(() => userStore.userInfo)
-
-// 判断是否在搜索页面
 const isSearchPage = computed(() => route.path === '/student/search')
 
 const navItems = [
-  { path: '/student/home', label: '首页', icon: 'HomeFilled' },
-  { path: '/student/activities', label: '活动中心', icon: 'Calendar' },
-  { path: '/student/venue-apply', label: '场地申请', icon: 'Location' },
-  { path: '/student/equipment', label: '器材借还', icon: 'Box' },
-  { path: '/student/forum', label: '体育论坛', icon: 'ChatDotRound' }
+  { path: '/student/home', label: '首页', icon: HomeFilled },
+  { path: '/student/activities', label: '活动中心', icon: Calendar },
+  { path: '/student/venue-apply', label: '场地申请', icon: Location },
+  { path: '/student/equipment', label: '器材借还', icon: Box },
+  { path: '/student/forum', label: '体育论坛', icon: ChatDotRound }
 ]
 
-const notifications = ref([
-  {
-    id: 1,
-    type: 'success',
-    title: '预约成功',
-    content: '您的篮球场预约申请已通过审批',
-    time: '2分钟前',
-    read: false
-  },
-  {
-    id: 2,
-    type: 'warning',
-    title: '器材归还提醒',
-    content: '您借用的羽毛球拍将于今天下午5点到期',
-    time: '1小时前',
-    read: false
-  },
-  {
-    id: 3,
-    type: 'info',
-    title: '活动通知',
-    content: '本周六将举办校园篮球赛，欢迎报名参加',
-    time: '3小时前',
-    read: false
-  }
-])
-
-const isActive = (path) => {
-  return route.path === path
-}
+const isActive = (path) => route.path === path
 
 const navigate = (path) => {
   router.push(path)
@@ -186,19 +173,89 @@ const goHome = () => {
 }
 
 const handleSearch = () => {
-  if (searchKeyword.value.trim()) {
-    // 在新标签页打开搜索页面
-    const routeUrl = router.resolve({
-      path: '/student/search',
-      query: { keyword: searchKeyword.value }
+  if (!searchKeyword.value.trim()) {
+    return
+  }
+  const routeUrl = router.resolve({
+    path: '/student/search',
+    query: { keyword: searchKeyword.value }
+  })
+  window.open(routeUrl.href, '_blank')
+  searchKeyword.value = ''
+}
+
+const loadUnreadCount = async () => {
+  try {
+    const res = await getUnreadNotificationCount()
+    unreadCount.value = Number(res.data || 0)
+  } catch (error) {
+    unreadCount.value = 0
+  }
+}
+
+const normalizeNotification = (item) => ({
+  id: item.id,
+  title: item.title,
+  content: item.content,
+  senderName: item.senderName,
+  businessType: item.businessType,
+  time: item.createdAt,
+  read: item.isRead === 1
+})
+
+const loadNotifications = async () => {
+  notificationLoading.value = true
+  try {
+    const res = await getNotificationPage({
+      pageNum: 1,
+      pageSize: 20
     })
-    window.open(routeUrl.href, '_blank')
-    searchKeyword.value = ''
+    notifications.value = (res.data?.records || []).map(normalizeNotification)
+  } finally {
+    notificationLoading.value = false
   }
 }
 
 const showNotifications = () => {
   notificationDrawer.value = true
+}
+
+const handleNotificationClick = async (item) => {
+  if (item.read) {
+    return
+  }
+  await markNotificationRead(item.id)
+  item.read = true
+  unreadCount.value = Math.max(0, unreadCount.value - 1)
+}
+
+const handleDeleteNotification = async (item) => {
+  try {
+    await ElMessageBox.confirm('确定删除这条消息吗？', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+
+    await deleteNotification(item.id)
+    notifications.value = notifications.value.filter(notification => notification.id !== item.id)
+    if (!item.read) {
+      unreadCount.value = Math.max(0, unreadCount.value - 1)
+    }
+    ElMessage.success('消息删除成功')
+  } catch (error) {
+    // 用户取消时不提示
+  }
+}
+
+const handleMarkAllRead = async () => {
+  await markAllNotificationsRead()
+  notifications.value = notifications.value.map(item => ({
+    ...item,
+    read: true
+  }))
+  unreadCount.value = 0
+  ElMessage.success('消息已全部标记为已读')
 }
 
 const handleCommand = (command) => {
@@ -217,26 +274,41 @@ const handleCommand = (command) => {
         ElMessage.success('已退出登录')
       }).catch(() => {})
       break
+    default:
+      break
   }
 }
 
-const getNotificationIcon = (type) => {
+const getNotificationIcon = (businessType) => {
   const iconMap = {
-    success: 'SuccessFilled',
-    warning: 'WarningFilled',
-    info: 'InfoFilled'
+    venue_application: Location,
+    activity_registration: Calendar,
+    equipment_borrow: Box,
+    equipment_return: Box
   }
-  return iconMap[type] || 'InfoFilled'
+  return iconMap[businessType] || InfoFilled
 }
 
-const getNotificationColor = (type) => {
+const getNotificationColor = (businessType) => {
   const colorMap = {
-    success: '#52c41a',
-    warning: '#faad14',
-    info: '#1890ff'
+    venue_application: '#52c41a',
+    activity_registration: '#1890ff',
+    equipment_borrow: '#fa8c16',
+    equipment_return: '#13c2c2'
   }
-  return colorMap[type] || '#1890ff'
+  return colorMap[businessType] || '#1890ff'
 }
+
+watch(notificationDrawer, async (visible) => {
+  if (visible) {
+    await loadNotifications()
+    await loadUnreadCount()
+  }
+})
+
+onMounted(() => {
+  loadUnreadCount()
+})
 </script>
 
 <style lang="scss" scoped>

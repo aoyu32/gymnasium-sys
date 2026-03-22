@@ -143,6 +143,8 @@
 }
 
 .notification-list {
+  min-height: 240px;
+
   .notification-item {
     display: flex;
     gap: 12px;
@@ -170,11 +172,38 @@
     .notification-content {
       flex: 1;
 
+      .notification-title-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 4px;
+
+        .notification-actions {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          flex-shrink: 0;
+        }
+
+        .unread-dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: #f5222d;
+          flex-shrink: 0;
+        }
+
+        .delete-btn {
+          padding: 0;
+          min-height: auto;
+        }
+      }
+
       .notification-title {
         font-size: 14px;
         font-weight: 500;
         color: #262626;
-        margin-bottom: 4px;
       }
 
       .notification-desc {
@@ -188,6 +217,21 @@
         font-size: 12px;
         color: #8c8c8c;
       }
+
+      .notification-meta {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        font-size: 12px;
+        color: #8c8c8c;
+      }
     }
   }
+}
+
+.notification-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-bottom: 12px;
 }

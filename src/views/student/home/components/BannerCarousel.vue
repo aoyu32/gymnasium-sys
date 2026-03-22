@@ -15,10 +15,32 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { banners as mockBanners } from '@/mock/activities'
-
-const banners = ref(mockBanners)
+import banner1 from '@/assets/banners/banner1.jfif'
+import banner2 from '@/assets/banners/banner2.jfif'
+import banner3 from '@/assets/banners/banner3.jfif'
+const banners = [
+  {
+    id: 1,
+    title: '欢迎使用体育馆管理系统',
+    description: '在线预约场地，轻松借用器材',
+    buttonText: '立即体验',
+    image: banner1
+  },
+  {
+    id: 2,
+    title: '校园篮球赛报名中',
+    description: '展现你的运动风采',
+    buttonText: '马上报名',
+    image: banner2
+  },
+  {
+    id: 3,
+    title: '体育论坛上线',
+    description: '分享运动心得，结识运动伙伴',
+    buttonText: '去看看',
+    image: banner3
+  }
+]
 </script>
 
 <style lang="scss" scoped>
@@ -34,7 +56,7 @@ const banners = ref(mockBanners)
   background-size: cover;
   background-position: center;
   position: relative;
-  
+
   &::before {
     content: '';
     position: absolute;
@@ -56,13 +78,13 @@ const banners = ref(mockBanners)
   align-items: center;
   color: white;
   text-align: center;
-  
+
   h2 {
     font-size: 48px;
     font-weight: bold;
     margin-bottom: 16px;
   }
-  
+
   p {
     font-size: 20px;
     margin-bottom: 32px;
